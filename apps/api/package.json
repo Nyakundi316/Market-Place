@@ -7,7 +7,7 @@
     "dev": "dotenv -e ../../.env -- nest start --watch",
     "start": "node dist/main",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src test prisma",
+    "lint": "eslint src test prisma --max-warnings 0",
     "test": "jest",
     "test:e2e": "jest --config test/jest-e2e.config.js --runInBand",
     "db:generate": "prisma generate",
