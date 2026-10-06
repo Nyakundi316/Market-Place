@@ -1,0 +1,24 @@
+{
+  "name": "@markethub/shared",
+  "version": "0.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "dev": "tsc -p tsconfig.build.json --watch --preserveWatchOutput",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@markethub/config": "workspace:*",
+    "eslint": "^9.12.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.1.0"
+  }
+}
