@@ -9,15 +9,19 @@ _Last updated: 2026-10-06_
 - **1.3** `apps/api` NestJS scaffold: env validated before boot, pino logging with request ids, `ApiErrorDto` filter, response sanitiser, Helmet, CORS = WEB_URL, `/health` — 6 unit + 4 e2e tests
 - **1.4** Prisma schema: all 20 §3 models + `RefreshToken`, `AuthToken` (see brief §3 addendum)
 - **1.5** Migrations: init + raw SQL (partial/GIN indexes, CHECKs, 3 triggers) — 6 DB integration tests; no Prisma drift
+- **1.6** Seed: 10 root / 45 sub categories + admin (idempotent, never overwrites passwords) — dev DB reset with user consent and seeded
+- **1.7** Redis module + Lua token-bucket rate limiting as a global guard (§9 policies; payment fails closed)
+- **1.8** Auth core: argon2id, HS256 access JWT, opaque refresh tokens (HMAC-stored, single-use, family revocation on reuse), register/login/refresh/logout, CSRF double-submit, audit on register
+
+Tests: shared 21 · api unit 12 · api e2e 40 — all green
 
 ## In progress
-- **1.6** Seed (category tree + admin)
+- **1.9** JwtAuthGuard (global, @Public opt-out), Roles/Verified guards, @CurrentUser; verify-email, forgot/reset-password (Mailhog in dev)
 
 ## Next
-1.7 Redis + rate limiting → 1.8 auth core → 1.9 guards + email flows → 1.10 OAuth → 1.11 profile endpoints → 1.12 web scaffold → 1.13 auth pages → 1.14 onboarding → 1.15 E2E + CI
+1.10 OAuth → 1.11 profile endpoints → 1.12 web scaffold → 1.13 auth pages → 1.14 onboarding → 1.15 E2E + CI
 
 ## Blockers / decisions
-- Dev DB (`markethub`) needs a one-time `prisma migrate reset` (it's empty; Prisma requires explicit user consent for AI-initiated resets)
 - Escrow model (Phase 5): default is charge-now + platform-held funds + Connect transfer on release, since card auths expire in ~7 days
 - Webhook idempotency (§7) will need a `WebhookEvent(eventId uniq)` table in Phase 5 — to be documented then
 - ts-jest `isolatedModules` deprecation warning — tidy in 1.15
