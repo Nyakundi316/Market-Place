@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import './globals.css';
+import { Providers } from './providers';
 
 const sans = localFont({ src: './fonts/GeistVF.woff', variable: '--font-sans', weight: '100 900' });
 const mono = localFont({
@@ -24,7 +25,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${sans.variable} ${mono.variable} font-sans antialiased`}>{children}</body>
+      <body className={`${sans.variable} ${mono.variable} font-sans antialiased`}>
+        <Providers>{children}</Providers>
+      </body>
     </html>
   );
 }
