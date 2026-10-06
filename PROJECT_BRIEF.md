@@ -201,3 +201,10 @@ PLATFORM_FEE_PERCENT=2 ESCROW_AUTO_RELEASE_HOURS=72 DISPUTE_WINDOW_DAYS=7
 
 ## 14. "start Phase 1"
 1. Print Phase 1 checklist  2. Show scaffold shell commands  3. Wait for confirmation  4. Execute one sub-step at a time, running tests. Split any sub-step >~150 LOC.
+
+## §3 Addendum — documented extras (approved 2026-10-06)
+- **RefreshToken**: userId, tokenHash(uniq), familyId, expiresAt, usedAt, revokedAt, userAgent, ipAddress. Backs §9 single-use rotation; reuse of a used token revokes the family.
+- **AuthToken**: userId, type (enum AuthTokenType: email_verify|password_reset), tokenHash(uniq), expiresAt, usedAt. Backs verify-email / reset-password links.
+- `User.passwordHash` is nullable for OAuth-only accounts.
+- Join tables (Follow, Favorite, ListingTag) carry `createdAt` only.
+- Money columns are `Decimal(14,2)`; currency `Char(3)` ISO 4217; country `Char(2)` ISO 3166-1.

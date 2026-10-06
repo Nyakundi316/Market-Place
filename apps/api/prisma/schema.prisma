@@ -1,0 +1,345 @@
+// MarketHub schema — source of truth is PROJECT_BRIEF.md §3.
+// Tables/columns are snake_case in Postgres, camelCase in TS.
+// Raw-SQL pieces (triggers, partial/GIN indexes) live in migrations, see 1.5.
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [citext, pg_trgm]
+}
+
+// ─── Enums ──────────────────────────────────────────────────────────────────
+
+enum UserRole {
+  seller
+  buyer
+  both
+  admin
+}
+
+enum ListingType {
+  product
+  service
+  job
+  request
+}
+
+enum ListingStatus {
+  draft
+  pending
+  active
+  sold
+  expired
+  removed
+}
+
+enum MessageType {
+  text
+  image
+  file
+  system
+  offer
+  offer_response
+}
+
+enum OfferStatus {
+  pending
+  accepted
+  declined
+  countered
+  expired
+  withdrawn
+}
+
+enum OrderStatus {
+  awaiting_payment
+  paid
+  in_escrow
+  shipped
+  delivered
+  completed
+  disputed
+  refunded
+  cancelled
+}
+
+enum EscrowStatus {
+  held
+  released
+  refunded
+  partially_refunded
+  disputed
+}
+
+enum TxnType {
+  charge
+  payout
+  refund
+  fee
+  chargeback
+}
+
+enum TxnStatus {
+  pending
+  succeeded
+  failed
+  reversed
+}
+
+/// Extra (documented in PROJECT_BRIEF §3 addendum): purposes for AuthToken
+enum AuthTokenType {
+  email_verify
+  password_reset
+}
+
+// ─── Identity ───────────────────────────────────────────────────────────────
+
+model User {
+  id              String    @id @default(uuid()) @db.Uuid
+  email           String    @unique @db.Citext
+  phone           String?
+  passwordHash    String?   @map("password_hash") // null for OAuth-only accounts
+  role            UserRole  @default(buyer)
+  isEmailVerified Boolean   @default(false) @map("is_email_verified")
+  isPhoneVerified Boolean   @default(false) @map("is_phone_verified")
+  isActive        Boolean   @default(true) @map("is_active")
+  isBanned        Boolean   @default(false) @map("is_banned")
+  lastLoginAt     DateTime? @map("last_login_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  profile       Profile?
+  oauthAccounts OAuthAccount[]
+  refreshTokens RefreshToken[]
+  authTokens    AuthToken[]
+  listings      Listing[]
+  following     Follow[]       @relation("follower")
+  followers     Follow[]       @relation("following")
+  favorites     Favorite[]
+
+  @@map("users")
+}
+
+model OAuthAccount {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  provider    String
+  providerUid String   @map("provider_uid")
+  tokens      Json?
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerUid])
+  @@index([userId])
+  @@map("oauth_accounts")
+}
+
+/// Extra (§9): hashed, single-use, rotated. Reuse of a used token revokes its whole family.
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  familyId  String    @map("family_id") @db.Uuid
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  revokedAt DateTime? @map("revoked_at")
+  userAgent String?   @map("user_agent")
+  ipAddress String?   @map("ip_address")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+  @@map("refresh_tokens")
+}
+
+/// Extra (§9): email-verify and password-reset links. Only the hash is stored.
+model AuthToken {
+  id        String        @id @default(uuid()) @db.Uuid
+  userId    String        @map("user_id") @db.Uuid
+  type      AuthTokenType
+  tokenHash String        @unique @map("token_hash")
+  expiresAt DateTime      @map("expires_at")
+  usedAt    DateTime?     @map("used_at")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type])
+  @@map("auth_tokens")
+}
+
+model Profile {
+  userId           String   @id @map("user_id") @db.Uuid
+  displayName      String   @map("display_name")
+  username         String   @unique @db.Citext
+  avatarUrl        String?  @map("avatar_url")
+  coverUrl         String?  @map("cover_url")
+  bio              String?
+  profession       String?
+  company          String?
+  website          String?
+  country          String?  @db.Char(2)
+  city             String?
+  socials          Json     @default("{}")
+  idVerified       Boolean  @default(false) @map("id_verified")
+  businessVerified Boolean  @default(false) @map("business_verified")
+  ratingAvg        Decimal  @default(0) @map("rating_avg") @db.Decimal(3, 2)
+  ratingCount      Int      @default(0) @map("rating_count")
+  listingsCount    Int      @default(0) @map("listings_count")
+  completedDeals   Int      @default(0) @map("completed_deals")
+  responseRate     Decimal  @default(0) @map("response_rate") @db.Decimal(5, 2)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([country])
+  @@map("profiles")
+}
+
+model Follow {
+  followerId  String   @map("follower_id") @db.Uuid
+  followingId String   @map("following_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  follower  User @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following User @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followingId])
+  @@index([followingId])
+  @@map("follows")
+}
+
+// ─── Catalog ────────────────────────────────────────────────────────────────
+
+model Category {
+  id          String   @id @default(uuid()) @db.Uuid
+  parentId    String?  @map("parent_id") @db.Uuid
+  name        String
+  slug        String   @unique
+  icon        String?
+  description String?
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  parent   Category?  @relation("tree", fields: [parentId], references: [id], onDelete: Restrict)
+  children Category[] @relation("tree")
+  listings Listing[]
+
+  @@index([parentId, sortOrder])
+  @@map("categories")
+}
+
+model Tag {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @unique
+  slug      String   @unique
+  useCount  Int      @default(0) @map("use_count")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  listings ListingTag[]
+
+  @@map("tags")
+}
+
+model Listing {
+  id             String                   @id @default(uuid()) @db.Uuid
+  sellerId       String                   @map("seller_id") @db.Uuid
+  categoryId     String                   @map("category_id") @db.Uuid
+  type           ListingType
+  status         ListingStatus            @default(draft)
+  title          String
+  slug           String                   @unique
+  description    String
+  price          Decimal?                 @db.Decimal(14, 2)
+  currency       String                   @db.Char(3)
+  isNegotiable   Boolean                  @default(true) @map("is_negotiable")
+  isPriceRange   Boolean                  @default(false) @map("is_price_range")
+  priceMin       Decimal?                 @map("price_min") @db.Decimal(14, 2)
+  priceMax       Decimal?                 @map("price_max") @db.Decimal(14, 2)
+  stock          Int?
+  condition      String?
+  country        String?                  @db.Char(2)
+  city           String?
+  lat            Decimal?                 @db.Decimal(9, 6)
+  lng            Decimal?                 @db.Decimal(9, 6)
+  contactPref    String?                  @map("contact_pref")
+  viewsCount     Int                      @default(0) @map("views_count")
+  favoritesCount Int                      @default(0) @map("favorites_count")
+  chatCount      Int                      @default(0) @map("chat_count")
+  isFeatured     Boolean                  @default(false) @map("is_featured")
+  featuredUntil  DateTime?                @map("featured_until")
+  publishedAt    DateTime?                @map("published_at")
+  expiresAt      DateTime?                @map("expires_at")
+  searchVector   Unsupported("tsvector")? @map("search_vector") // set by trigger, see 1.5
+  createdAt      DateTime                 @default(now()) @map("created_at")
+  updatedAt      DateTime                 @updatedAt @map("updated_at")
+
+  seller    User           @relation(fields: [sellerId], references: [id], onDelete: Restrict)
+  category  Category       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  images    ListingImage[]
+  tags      ListingTag[]
+  favorites Favorite[]
+
+  // Partial (category WHERE active) + GIN indexes are raw SQL in 1.5.
+  @@index([sellerId])
+  @@index([status])
+  @@index([price])
+  @@index([country, city])
+  @@map("listings")
+}
+
+model ListingImage {
+  id        String   @id @default(uuid()) @db.Uuid
+  listingId String   @map("listing_id") @db.Uuid
+  url       String
+  thumbUrl  String?  @map("thumb_url")
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId, sortOrder])
+  @@map("listing_images")
+}
+
+model ListingTag {
+  listingId String   @map("listing_id") @db.Uuid
+  tagId     String   @map("tag_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([listingId, tagId])
+  @@index([tagId])
+  @@map("listing_tags")
+}
+
+model Favorite {
+  userId    String   @map("user_id") @db.Uuid
+  listingId String   @map("listing_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@id([userId, listingId])
+  @@index([listingId])
+  @@map("favorites")
+}
