@@ -1,0 +1,5 @@
+{
+  "extends": "@markethub/config/tsconfig/nest.json",
+  "compilerOptions": { "outDir": "dist", "baseUrl": ".", "types": ["node", "jest"] },
+  "include": ["src", "test"]
+}
