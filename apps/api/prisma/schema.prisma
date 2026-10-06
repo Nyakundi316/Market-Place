@@ -122,6 +122,14 @@ model User {
   followers     Follow[]       @relation("following")
   favorites     Favorite[]
 
+  buyerConversations  Conversation[] @relation("conversationBuyer")
+  sellerConversations Conversation[] @relation("conversationSeller")
+  messages            Message[]
+  offersSent          Offer[]        @relation("offerFrom")
+  offersReceived      Offer[]        @relation("offerTo")
+  purchases           Order[]        @relation("orderBuyer")
+  sales               Order[]        @relation("orderSeller")
+
   @@map("users")
 }
 
@@ -289,11 +297,14 @@ model Listing {
   createdAt      DateTime                 @default(now()) @map("created_at")
   updatedAt      DateTime                 @updatedAt @map("updated_at")
 
-  seller    User           @relation(fields: [sellerId], references: [id], onDelete: Restrict)
-  category  Category       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
-  images    ListingImage[]
-  tags      ListingTag[]
-  favorites Favorite[]
+  seller        User           @relation(fields: [sellerId], references: [id], onDelete: Restrict)
+  category      Category       @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  images        ListingImage[]
+  tags          ListingTag[]
+  favorites     Favorite[]
+  conversations Conversation[]
+  offers        Offer[]
+  orders        Order[]
 
   // Partial (category WHERE active) + GIN indexes are raw SQL in 1.5.
   @@index([sellerId])
@@ -342,4 +353,126 @@ model Favorite {
   @@id([userId, listingId])
   @@index([listingId])
   @@map("favorites")
+}
+
+// ─── Chat & offers ──────────────────────────────────────────────────────────
+
+model Conversation {
+  id            String    @id @default(uuid()) @db.Uuid
+  listingId     String    @map("listing_id") @db.Uuid
+  buyerId       String    @map("buyer_id") @db.Uuid
+  sellerId      String    @map("seller_id") @db.Uuid
+  lastMessageAt DateTime? @map("last_message_at")
+  // Plain column, not a relation: set by trigger (1.5) and avoids a Conversation↔Message cycle.
+  lastMessageId String?   @map("last_message_id") @db.Uuid
+  buyerUnread   Int       @default(0) @map("buyer_unread")
+  sellerUnread  Int       @default(0) @map("seller_unread")
+  isArchived    Boolean   @default(false) @map("is_archived")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  listing  Listing   @relation(fields: [listingId], references: [id], onDelete: Restrict)
+  buyer    User      @relation("conversationBuyer", fields: [buyerId], references: [id], onDelete: Restrict)
+  seller   User      @relation("conversationSeller", fields: [sellerId], references: [id], onDelete: Restrict)
+  messages Message[]
+  offers   Offer[]
+
+  @@unique([listingId, buyerId, sellerId])
+  @@index([buyerId, lastMessageAt(sort: Desc)])
+  @@index([sellerId, lastMessageAt(sort: Desc)])
+  @@map("conversations")
+}
+
+/// Immutable apart from read state, so createdAt only (§3).
+model Message {
+  id             String      @id @default(uuid()) @db.Uuid
+  conversationId String      @map("conversation_id") @db.Uuid
+  senderId       String      @map("sender_id") @db.Uuid
+  type           MessageType @default(text)
+  body           String? // stored raw, escaped on render (§5)
+  attachments    Json        @default("[]")
+  offerId        String?     @map("offer_id") @db.Uuid
+  isRead         Boolean     @default(false) @map("is_read")
+  readAt         DateTime?   @map("read_at")
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User         @relation(fields: [senderId], references: [id], onDelete: Restrict)
+  offer        Offer?       @relation(fields: [offerId], references: [id], onDelete: SetNull)
+
+  @@index([conversationId, createdAt(sort: Desc)])
+  @@map("messages")
+}
+
+/// A counter-offer is a new row pointing at its parent; the parent becomes `countered`.
+model Offer {
+  id             String      @id @default(uuid()) @db.Uuid
+  conversationId String      @map("conversation_id") @db.Uuid
+  listingId      String      @map("listing_id") @db.Uuid
+  fromUserId     String      @map("from_user_id") @db.Uuid
+  toUserId       String      @map("to_user_id") @db.Uuid
+  parentOfferId  String?     @map("parent_offer_id") @db.Uuid
+  quantity       Int         @default(1)
+  unitPrice      Decimal     @map("unit_price") @db.Decimal(14, 2)
+  totalPrice     Decimal     @map("total_price") @db.Decimal(14, 2)
+  currency       String      @db.Char(3)
+  message        String?
+  status         OfferStatus @default(pending)
+  expiresAt      DateTime?   @map("expires_at")
+  respondedAt    DateTime?   @map("responded_at")
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Restrict)
+  listing      Listing      @relation(fields: [listingId], references: [id], onDelete: Restrict)
+  fromUser     User         @relation("offerFrom", fields: [fromUserId], references: [id], onDelete: Restrict)
+  toUser       User         @relation("offerTo", fields: [toUserId], references: [id], onDelete: Restrict)
+  parent       Offer?       @relation("counter", fields: [parentOfferId], references: [id], onDelete: Restrict)
+  counters     Offer[]      @relation("counter")
+  messages     Message[]
+  order        Order?
+
+  @@index([conversationId, createdAt(sort: Desc)])
+  @@index([toUserId, status])
+  @@index([fromUserId, status])
+  @@map("offers")
+}
+
+// ─── Orders ─────────────────────────────────────────────────────────────────
+
+model Order {
+  id              String      @id @default(uuid()) @db.Uuid
+  orderNumber     String      @unique @map("order_number") // ORD-YYYY-NNNNNN
+  listingId       String      @map("listing_id") @db.Uuid
+  // Unique: one accepted offer yields at most one order (documented extra).
+  offerId         String?     @unique @map("offer_id") @db.Uuid
+  buyerId         String      @map("buyer_id") @db.Uuid
+  sellerId        String      @map("seller_id") @db.Uuid
+  quantity        Int
+  unitPrice       Decimal     @map("unit_price") @db.Decimal(14, 2)
+  subtotal        Decimal     @db.Decimal(14, 2)
+  platformFee     Decimal     @map("platform_fee") @db.Decimal(14, 2)
+  total           Decimal     @db.Decimal(14, 2)
+  currency        String      @db.Char(3)
+  status          OrderStatus @default(awaiting_payment)
+  deliveryMethod  String?     @map("delivery_method")
+  deliveryAddress Json?       @map("delivery_address")
+  trackingNumber  String?     @map("tracking_number")
+  notes           String?
+  paidAt          DateTime?   @map("paid_at")
+  deliveredAt     DateTime?   @map("delivered_at")
+  completedAt     DateTime?   @map("completed_at")
+  cancelledAt     DateTime?   @map("cancelled_at")
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Restrict)
+  offer   Offer?  @relation(fields: [offerId], references: [id], onDelete: Restrict)
+  buyer   User    @relation("orderBuyer", fields: [buyerId], references: [id], onDelete: Restrict)
+  seller  User    @relation("orderSeller", fields: [sellerId], references: [id], onDelete: Restrict)
+
+  @@index([buyerId, createdAt(sort: Desc)])
+  @@index([sellerId, createdAt(sort: Desc)])
+  @@index([listingId])
+  @@index([status])
+  @@map("orders")
 }
