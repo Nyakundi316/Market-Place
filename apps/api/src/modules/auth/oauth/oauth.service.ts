@@ -23,6 +23,11 @@ export class OAuthService {
     private readonly audit: AuditService,
   ) {}
 
+  /** Which sign-in buttons the web app should show. */
+  enabledProviders(): OAuthProvider[] {
+    return (Object.keys(this.clients) as OAuthProvider[]).filter((p) => this.clients[p]);
+  }
+
   /** 404 rather than 400 for unconfigured providers: the route simply doesn't exist here. */
   client(provider: OAuthProvider): OAuthClient {
     const client = this.clients[provider];

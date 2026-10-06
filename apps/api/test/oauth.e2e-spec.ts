@@ -152,6 +152,10 @@ describe('OAuth (e2e)', () => {
     expect(res.headers.location).toBe('http://localhost:3000/login?error=oauth_failed');
   });
 
+  it('GET /auth/oauth lists only configured providers', async () => {
+    await http().get('/auth/oauth').expect(200, { providers: ['google'] });
+  });
+
   it('unconfigured provider → 404, unknown provider → 400', async () => {
     await http().get('/auth/oauth/github').expect(404);
     await http().get('/auth/oauth/facebook').expect(400);

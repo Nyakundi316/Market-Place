@@ -31,6 +31,11 @@ export class OAuthController {
     this.secure = env.NODE_ENV === 'production';
   }
 
+  @Get()
+  providers() {
+    return { providers: this.oauth.enabledProviders() };
+  }
+
   @Get(':provider')
   start(@Param('provider', providerPipe) provider: OAuthProvider, @Res() res: Response) {
     const client = this.oauth.client(provider);
