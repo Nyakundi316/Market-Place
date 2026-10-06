@@ -52,3 +52,11 @@ describe('cursorQuerySchema', () => {
     expect(cursorQuerySchema.parse({}).limit).toBe(20);
   });
 });
+
+describe('reserved usernames', () => {
+  it.each(['admin', 'Support', 'markethub'])('rejects %s', (u) => {
+    const result = usernameSchema.safeParse(u);
+    expect(result.success).toBe(false);
+    expect(result.error?.issues[0]?.message).toBe('That username is reserved');
+  });
+});

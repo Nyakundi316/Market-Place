@@ -1,5 +1,26 @@
 import { z } from 'zod';
 
+// Names that would let someone pose as staff or the platform itself.
+// 'admin' itself is taken by the seeded admin account.
+const RESERVED_USERNAMES = new Set([
+  'admin',
+  'administrator',
+  'markethub',
+  'support',
+  'help',
+  'moderator',
+  'mod',
+  'staff',
+  'official',
+  'security',
+  'billing',
+  'payments',
+  'escrow',
+  'system',
+  'root',
+  'me',
+]);
+
 export const usernameSchema = z
   .string()
   .trim()
@@ -9,7 +30,8 @@ export const usernameSchema = z
   .regex(
     /^[a-z0-9](?:[a-z0-9_]*[a-z0-9])?$/,
     'Letters, numbers and underscores; no leading/trailing underscore',
-  );
+  )
+  .refine((u) => !RESERVED_USERNAMES.has(u), 'That username is reserved');
 
 const url = z.string().trim().url().max(500);
 const shortText = (max: number) => z.string().trim().max(max);
