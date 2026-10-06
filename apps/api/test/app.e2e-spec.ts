@@ -19,7 +19,7 @@ describe('App (e2e)', () => {
 
   it('GET /health → 200 with security headers and redis up', async () => {
     const res = await request(app.getHttpServer()).get('/health').expect(200);
-    expect(res.body).toMatchObject({ status: 'ok', redis: 'up' });
+    expect(res.body).toMatchObject({ status: 'ok', redis: 'up', postgres: 'up' });
     expect(res.headers['x-content-type-options']).toBe('nosniff');
     expect(res.headers['x-request-id']).toMatch(/^[0-9a-f-]{36}$/);
   });

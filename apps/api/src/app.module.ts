@@ -9,6 +9,7 @@ import { RateLimitGuard } from './common/rate-limit/rate-limit.guard';
 import { RateLimitService } from './common/rate-limit/rate-limit.service';
 import { EnvModule, loadEnv } from './config/env.validation';
 import { HealthController } from './health/health.controller';
+import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -17,6 +18,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
   imports: [
     EnvModule,
     RedisModule,
+    PrismaModule,
     LoggerModule.forRootAsync({
       useFactory: () => {
         const env = loadEnv();
