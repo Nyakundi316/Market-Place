@@ -9,8 +9,8 @@
     "test:e2e": "turbo run test:e2e",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
-    "db:migrate": "pnpm --filter api prisma migrate dev",
-    "db:seed": "pnpm --filter api prisma db seed",
+    "db:migrate": "pnpm --filter api db:migrate",
+    "db:seed": "pnpm --filter api db:seed",
     "docker:up": "docker compose -f infra/docker-compose.yml up -d",
     "docker:down": "docker compose -f infra/docker-compose.yml down"
   },
@@ -20,5 +20,8 @@
     "prettier": "^3.3.0",
     "eslint": "^9.0.0"
   },
-  "engines": { "node": ">=20.0.0", "pnpm": ">=9.0.0" }
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  }
 }

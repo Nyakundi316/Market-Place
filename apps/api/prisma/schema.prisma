@@ -313,11 +313,14 @@ model Listing {
   offers        Offer[]
   orders        Order[]
 
-  // Partial (category WHERE active) + GIN indexes are raw SQL in 1.5.
+  // Partial (category WHERE active) index is raw SQL in the
+  // search_triggers_constraints migration; GIN(search_vector) is created there too.
   @@index([sellerId])
   @@index([status])
   @@index([price])
   @@index([country, city])
+  @@index([title(ops: raw("gin_trgm_ops"))], type: Gin, map: "listings_title_trgm_idx")
+  @@index([searchVector], type: Gin, map: "listings_search_vector_idx")
   @@map("listings")
 }
 

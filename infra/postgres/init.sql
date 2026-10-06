@@ -1,9 +1,3 @@
+-- Runs once on first boot of an empty volume. Extensions come from the Prisma
+-- migrations so every environment (dev, test, prod) gets them the same way.
 CREATE DATABASE markethub_test OWNER markethub;
-
-\connect markethub
-CREATE EXTENSION IF NOT EXISTS citext;
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
-
-\connect markethub_test
-CREATE EXTENSION IF NOT EXISTS citext;
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
