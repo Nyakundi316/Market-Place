@@ -7,7 +7,7 @@
     "dev": "dotenv -e ../../.env -- nest start --watch",
     "start": "node dist/main",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src test",
+    "lint": "eslint src test prisma",
     "test": "jest",
     "test:e2e": "jest --config test/jest-e2e.config.js --runInBand",
     "db:generate": "prisma generate",
@@ -24,6 +24,7 @@
     "@nestjs/core": "^10.4.0",
     "@nestjs/platform-express": "^10.4.0",
     "@prisma/client": "^6.16.0",
+    "argon2": "^0.41.1",
     "cookie-parser": "^1.4.7",
     "helmet": "^8.0.0",
     "nestjs-pino": "^4.1.0",
@@ -50,6 +51,10 @@
     "prisma": "^6.16.0",
     "supertest": "^7.0.0",
     "ts-jest": "^29.2.0",
+    "tsx": "^4.19.0",
     "typescript": "^5.5.0"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }
