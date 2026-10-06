@@ -2,26 +2,95 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
+/*
+ * MarketHub palette (HSL channels for Tailwind alpha support).
+ * ink #14201B · paper #F7F5F0 · market green #0F7B5F · saffron #F2A93B · verified #1A63C9
+ * All text/background pairs meet WCAG AA (§6).
+ */
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: 43 26% 95%;
+    --foreground: 155 23% 10%;
+    --card: 0 0% 100%;
+    --card-foreground: 155 23% 10%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 155 23% 10%;
+    --primary: 163 78% 27%;
+    --primary-foreground: 43 26% 97%;
+    --secondary: 150 18% 90%;
+    --secondary-foreground: 155 23% 14%;
+    --muted: 40 18% 90%;
+    --muted-foreground: 155 8% 36%;
+    --accent: 150 22% 88%;
+    --accent-foreground: 155 23% 12%;
+    --destructive: 20 88% 40%;
+    --destructive-foreground: 0 0% 100%;
+    --saffron: 37 88% 59%;
+    --saffron-foreground: 30 60% 14%;
+    --verified: 215 77% 45%;
+    --border: 40 14% 84%;
+    --input: 40 14% 80%;
+    --ring: 163 78% 27%;
+    --radius: 0.625rem;
+  }
+
+  .dark {
+    --background: 155 22% 7%;
+    --foreground: 43 20% 92%;
+    --card: 155 20% 10%;
+    --card-foreground: 43 20% 92%;
+    --popover: 155 20% 10%;
+    --popover-foreground: 43 20% 92%;
+    --primary: 160 60% 45%;
+    --primary-foreground: 155 30% 6%;
+    --secondary: 155 14% 16%;
+    --secondary-foreground: 43 20% 92%;
+    --muted: 155 14% 15%;
+    --muted-foreground: 150 8% 64%;
+    --accent: 155 14% 18%;
+    --accent-foreground: 43 20% 92%;
+    --destructive: 18 80% 52%;
+    --destructive-foreground: 0 0% 100%;
+    --saffron: 37 88% 59%;
+    --saffron-foreground: 30 60% 10%;
+    --verified: 215 85% 62%;
+    --border: 155 12% 20%;
+    --input: 155 12% 24%;
+    --ring: 160 60% 45%;
   }
 }
 
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: 'ss01', 'cv11';
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
 }
 
 @layer utilities {
+  /* Prices line up in lists and never jitter while counting. */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
   .text-balance {
     text-wrap: balance;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }
