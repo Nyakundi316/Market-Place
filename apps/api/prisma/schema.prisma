@@ -129,6 +129,13 @@ model User {
   offersReceived      Offer[]        @relation("offerTo")
   purchases           Order[]        @relation("orderBuyer")
   sales               Order[]        @relation("orderSeller")
+  transactions        Transaction[]
+  reviewsGiven        Review[]       @relation("reviewRater")
+  reviewsReceived     Review[]       @relation("reviewRatee")
+  notifications       Notification[]
+  auditLogs           AuditLog[]
+  reportsFiled        Report[]       @relation("reportReporter")
+  reportsResolved     Report[]       @relation("reportResolver")
 
   @@map("users")
 }
@@ -470,9 +477,139 @@ model Order {
   buyer   User    @relation("orderBuyer", fields: [buyerId], references: [id], onDelete: Restrict)
   seller  User    @relation("orderSeller", fields: [sellerId], references: [id], onDelete: Restrict)
 
+  escrow       EscrowHold?
+  transactions Transaction[]
+  review       Review?
+
   @@index([buyerId, createdAt(sort: Desc)])
   @@index([sellerId, createdAt(sort: Desc)])
   @@index([listingId])
   @@index([status])
   @@map("orders")
+}
+
+// ─── Money (§7) ─────────────────────────────────────────────────────────────
+// Rows here are never deleted; corrections are new refund/reversal rows.
+
+model EscrowHold {
+  id                 String       @id @default(uuid()) @db.Uuid
+  orderId            String       @unique @map("order_id") @db.Uuid
+  amount             Decimal      @db.Decimal(14, 2)
+  currency           String       @db.Char(3)
+  status             EscrowStatus @default(held)
+  heldAt             DateTime     @default(now()) @map("held_at")
+  releaseScheduledAt DateTime?    @map("release_scheduled_at")
+  releasedAt         DateTime?    @map("released_at")
+  refundedAt         DateTime?    @map("refunded_at")
+  disputeReason      String?      @map("dispute_reason")
+  notes              String?
+  createdAt          DateTime     @default(now()) @map("created_at")
+  updatedAt          DateTime     @updatedAt @map("updated_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  @@index([status, releaseScheduledAt])
+  @@map("escrow_holds")
+}
+
+model Transaction {
+  id             String    @id @default(uuid()) @db.Uuid
+  orderId        String    @map("order_id") @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  type           TxnType
+  status         TxnStatus @default(pending)
+  amount         Decimal   @db.Decimal(14, 2)
+  currency       String    @db.Char(3)
+  gateway        String // "stripe" | "paystack"
+  gatewayRef     String?   @map("gateway_ref")
+  gatewayPayload Json?     @map("gateway_payload") // never exposed (§9)
+  idempotencyKey String    @unique @map("idempotency_key")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at") // documented extra: status moves pending→terminal
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([orderId])
+  @@index([gatewayRef])
+  @@map("transactions")
+}
+
+// ─── Trust ──────────────────────────────────────────────────────────────────
+
+/// CHECKs (rating 1–5, rater ≠ ratee) are raw SQL in 1.5.
+model Review {
+  id        String   @id @default(uuid()) @db.Uuid
+  orderId   String   @unique @map("order_id") @db.Uuid
+  raterId   String   @map("rater_id") @db.Uuid
+  rateeId   String   @map("ratee_id") @db.Uuid
+  rating    Int      @db.SmallInt
+  comment   String?
+  isVisible Boolean  @default(true) @map("is_visible")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Restrict)
+  rater User  @relation("reviewRater", fields: [raterId], references: [id], onDelete: Restrict)
+  ratee User  @relation("reviewRatee", fields: [rateeId], references: [id], onDelete: Restrict)
+
+  @@index([rateeId, createdAt(sort: Desc)])
+  @@map("reviews")
+}
+
+model Notification {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  type      String
+  title     String
+  body      String?
+  link      String?
+  payload   Json?
+  isRead    Boolean   @default(false) @map("is_read")
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead, createdAt(sort: Desc)])
+  @@map("notifications")
+}
+
+/// Append-only, so createdAt only. actorId null = system/job.
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Uuid
+  actorId    String?  @map("actor_id") @db.Uuid
+  action     String
+  entityType String   @map("entity_type")
+  entityId   String   @map("entity_id")
+  metadata   Json?
+  ipAddress  String?  @map("ip_address")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt(sort: Desc)])
+  @@map("audit_logs")
+}
+
+model Report {
+  id         String    @id @default(uuid()) @db.Uuid
+  reporterId String    @map("reporter_id") @db.Uuid
+  entityType String    @map("entity_type") // "listing" | "user" | "message" | "review"
+  entityId   String    @map("entity_id")
+  reason     String
+  details    String?
+  status     String    @default("open") // open | resolved | dismissed
+  resolvedBy String?   @map("resolved_by") @db.Uuid
+  resolvedAt DateTime? @map("resolved_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  reporter User  @relation("reportReporter", fields: [reporterId], references: [id], onDelete: Restrict)
+  resolver User? @relation("reportResolver", fields: [resolvedBy], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([entityType, entityId])
+  @@map("reports")
 }

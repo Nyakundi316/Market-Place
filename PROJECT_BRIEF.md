@@ -210,3 +210,5 @@ PLATFORM_FEE_PERCENT=2 ESCROW_AUTO_RELEASE_HOURS=72 DISPUTE_WINDOW_DAYS=7
 - Money columns are `Decimal(14,2)`; currency `Char(3)` ISO 4217; country `Char(2)` ISO 3166-1.
 - `Order.offerId` is unique: one accepted offer yields at most one order.
 - `Conversation.lastMessageId` is a plain uuid column (no FK) to avoid a Conversation↔Message cycle; maintained by trigger.
+- `Transaction.updatedAt` added: status moves pending→succeeded/failed; rows are still never deleted.
+- AuditLog is append-only (createdAt only); `actorId` null means a system/job action.
