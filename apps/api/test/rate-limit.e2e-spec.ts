@@ -54,15 +54,20 @@ describe('rate limiting (e2e)', () => {
 
   it('global: 100/min per caller', async () => {
     const server = app.getHttpServer();
+    const started = Date.now();
     const results = await Promise.all(
-      Array.from({ length: 101 }, () =>
+      Array.from({ length: 120 }, () =>
         request(server)
           .get('/health')
           .then((r) => r.status),
       ),
     );
-    expect(results.filter((s) => s === 200)).toHaveLength(100);
-    expect(results.filter((s) => s === 429)).toHaveLength(1);
+    // The bucket refills 1 token per 600ms, so a slow run legitimately admits a few extra.
+    const refilled = Math.ceil((Date.now() - started) / 600);
+    const allowed = results.filter((s) => s === 200).length;
+    expect(allowed).toBeGreaterThanOrEqual(100);
+    expect(allowed).toBeLessThanOrEqual(100 + refilled);
+    expect(results.filter((s) => s === 429).length).toBe(120 - allowed);
   });
 
   it('token bucket refills over time', async () => {

@@ -213,3 +213,4 @@ PLATFORM_FEE_PERCENT=2 ESCROW_AUTO_RELEASE_HOURS=72 DISPUTE_WINDOW_DAYS=7
 - `Transaction.updatedAt` added: status moves pending→succeeded/failed; rows are still never deleted.
 - AuditLog is append-only (createdAt only); `actorId` null means a system/job action.
 - §4/§9 rate limiting is a global **guard** (`common/rate-limit/`), not middleware: per-user buckets need `req.user`, which only exists after JwtAuthGuard. Anonymous calls are keyed by IP; auth routes always by IP. Redis outage → fail open, except `payment` which fails closed.
+- Session transport: access token in the response body (kept in memory by the web app); refresh token in an httpOnly `SameSite=Strict` cookie `mh_rt`; double-submit CSRF via readable cookie `mh_csrf` + `x-csrf-token` header on `/auth/refresh` and `/auth/logout`. The web app calls the API through a same-origin Next.js rewrite (`/api/*` → API_URL) so cookies stay first-party; Socket.IO connects directly with the access token.
