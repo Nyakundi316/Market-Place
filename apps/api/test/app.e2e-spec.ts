@@ -4,20 +4,22 @@ import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/bootstrap';
 import { loadEnv } from '../src/config/env.validation';
+import { resetRateLimits } from './helpers';
 
 describe('App (e2e)', () => {
   let app: INestApplication;
 
   beforeAll(async () => {
+    await resetRateLimits();
     const moduleRef = await Test.createTestingModule({ imports: [AppModule] }).compile();
     app = configureApp(moduleRef.createNestApplication(), loadEnv());
     await app.init();
   });
   afterAll(() => app.close());
 
-  it('GET /health → 200 with security headers', async () => {
+  it('GET /health → 200 with security headers and redis up', async () => {
     const res = await request(app.getHttpServer()).get('/health').expect(200);
-    expect(res.body.status).toBe('ok');
+    expect(res.body).toMatchObject({ status: 'ok', redis: 'up' });
     expect(res.headers['x-content-type-options']).toBe('nosniff');
     expect(res.headers['x-request-id']).toMatch(/^[0-9a-f-]{36}$/);
   });

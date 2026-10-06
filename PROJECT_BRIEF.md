@@ -212,3 +212,4 @@ PLATFORM_FEE_PERCENT=2 ESCROW_AUTO_RELEASE_HOURS=72 DISPUTE_WINDOW_DAYS=7
 - `Conversation.lastMessageId` is a plain uuid column (no FK) to avoid a Conversation↔Message cycle; maintained by trigger.
 - `Transaction.updatedAt` added: status moves pending→succeeded/failed; rows are still never deleted.
 - AuditLog is append-only (createdAt only); `actorId` null means a system/job action.
+- §4/§9 rate limiting is a global **guard** (`common/rate-limit/`), not middleware: per-user buckets need `req.user`, which only exists after JwtAuthGuard. Anonymous calls are keyed by IP; auth routes always by IP. Redis outage → fail open, except `payment` which fails closed.
