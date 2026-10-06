@@ -40,3 +40,27 @@ export function cookiesFrom(res: { headers: Record<string, unknown> }): Record<s
 
 export const uniqueEmail = (label: string) =>
   `${label}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}@test.local`;
+
+interface MailhogItem {
+  Content: { Headers: { Subject: string[] }; Body: string };
+}
+
+/**
+ * Polls Mailhog for the newest message to `to` and returns subject + the
+ * token from its link. Bodies are quoted-printable, so undo soft line breaks
+ * and `=3D` before matching.
+ */
+export async function mailTo(to: string, subject: RegExp, timeoutMs = 5000) {
+  const url = `http://localhost:8025/api/v2/search?kind=to&query=${encodeURIComponent(to)}`;
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    const { items } = (await (await fetch(url)).json()) as { items: MailhogItem[] };
+    const hit = items.find((m) => subject.test(m.Content.Headers.Subject[0] ?? ''));
+    if (hit) {
+      const body = hit.Content.Body.replace(/=\r?\n/g, '').replace(/=3D/g, '=');
+      return { subject: hit.Content.Headers.Subject[0]!, token: /token=([\w-]+)/.exec(body)?.[1] };
+    }
+    await new Promise((r) => setTimeout(r, 150));
+  }
+  return null;
+}

@@ -8,6 +8,7 @@ import type { AuthUserDto, LoginInput, RegisterInput } from '@markethub/shared';
 import { Prisma, type User } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.module';
 import { AuditService } from '../audit/audit.service';
+import { AccountLinksService } from './account-links.service';
 import { hashPassword, needsRehash, verifyPassword } from './password';
 import { type SessionMeta, TokenService } from './token.service';
 
@@ -29,6 +30,7 @@ export class AuthService {
     private readonly db: PrismaService,
     private readonly tokens: TokenService,
     private readonly audit: AuditService,
+    private readonly links: AccountLinksService,
   ) {}
 
   async register(input: RegisterInput, meta: SessionMeta): Promise<Session> {
@@ -51,6 +53,7 @@ export class AuthService {
         );
         return created;
       });
+      await this.links.sendVerification(user);
       return this.startSession(user, meta);
     } catch (err) {
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {

@@ -11,16 +11,23 @@ import {
 import {
   type AuthResponseDto,
   type Env,
+  type ForgotPasswordInput,
+  forgotPasswordSchema,
   type LoginInput,
   loginSchema,
   type RegisterInput,
   registerSchema,
+  type ResetPasswordInput,
+  resetPasswordSchema,
+  type VerifyEmailInput,
+  verifyEmailSchema,
 } from '@markethub/shared';
 import type { Request, Response } from 'express';
 import { Public } from '../../common/decorators/public.decorator';
 import { ZodValidationPipe } from '../../common/pipes/zod-validation.pipe';
 import { RateLimit } from '../../common/rate-limit/rate-limit.guard';
 import { InjectEnv } from '../../config/env.validation';
+import { AccountLinksService } from './account-links.service';
 import { AuthService, type Session } from './auth.service';
 import {
   assertCsrf,
@@ -44,9 +51,35 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly tokens: TokenService,
+    private readonly links: AccountLinksService,
     @InjectEnv() env: Env,
   ) {
     this.secureCookies = env.NODE_ENV === 'production';
+  }
+
+  @Post('verify-email')
+  @HttpCode(HttpStatus.OK)
+  async verifyEmail(@Body(new ZodValidationPipe(verifyEmailSchema)) body: VerifyEmailInput) {
+    await this.links.verifyEmail(body.token);
+    return { verified: true };
+  }
+
+  @Post('forgot-password')
+  @HttpCode(HttpStatus.ACCEPTED)
+  async forgotPassword(
+    @Body(new ZodValidationPipe(forgotPasswordSchema)) body: ForgotPasswordInput,
+  ) {
+    await this.links.requestPasswordReset(body.email);
+    return { message: 'If that email has an account, a reset link is on its way.' };
+  }
+
+  @Post('reset-password')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async resetPassword(
+    @Body(new ZodValidationPipe(resetPasswordSchema)) body: ResetPasswordInput,
+    @Req() req: Request,
+  ) {
+    await this.links.resetPassword(body.token, body.password, req.ip);
   }
 
   @Post('register')
