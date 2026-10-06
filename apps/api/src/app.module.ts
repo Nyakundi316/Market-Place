@@ -14,6 +14,7 @@ import { HealthController } from './health/health.controller';
 import { AuditModule } from './modules/audit/audit.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { MailModule } from './modules/mail/mail.service';
+import { UsersModule } from './modules/users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
 import { RedisModule } from './redis/redis.module';
 
@@ -27,6 +28,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     AuditModule,
     MailModule,
     AuthModule,
+    UsersModule,
     LoggerModule.forRootAsync({
       useFactory: () => {
         const env = loadEnv();
