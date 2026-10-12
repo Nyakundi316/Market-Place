@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Param, Patch, Req } from '@nestjs/common';
-import { type UpdateProfileInput, updateProfileSchema } from '@markethub/shared';
+import { Body, Controller, Get, HttpCode, Param, Patch, Post, Req } from '@nestjs/common';
+import { setAvatarSchema, type UpdateProfileInput, updateProfileSchema } from '@markethub/shared';
 import type { Request } from 'express';
 import { z } from 'zod';
 import { CurrentUser, type RequestUser } from '../../common/decorators/current-user.decorator';
@@ -26,6 +26,16 @@ export class UsersController {
     @Req() req: Request,
   ) {
     return this.users.updateMe(user.id, body, req.ip);
+  }
+
+  /** Body is the publicUrl from POST /images/sign (purpose=avatar) after the PUT succeeded. */
+  @Post('me/avatar')
+  @HttpCode(200)
+  setAvatar(
+    @CurrentUser() user: RequestUser,
+    @Body(new ZodValidationPipe(setAvatarSchema)) body: { url: string },
+  ) {
+    return this.users.setAvatar(user.id, body.url);
   }
 
   @Public()

@@ -9,6 +9,7 @@ import { Prisma, type Profile, type User } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.module';
 import { AuditService } from '../audit/audit.service';
 import { toAuthUser } from '../auth/auth.service';
+import { UploadsService } from '../uploads/uploads.service';
 
 export function toPublicProfile(p: Profile, memberSince: Date): PublicProfileDto {
   return {
@@ -46,6 +47,7 @@ export class UsersService {
   constructor(
     private readonly db: PrismaService,
     private readonly audit: AuditService,
+    private readonly uploads: UploadsService,
   ) {}
 
   async me(userId: string): Promise<MeDto> {
@@ -126,6 +128,22 @@ export class UsersService {
       }
       throw err;
     }
+  }
+
+  async setAvatar(userId: string, url: string): Promise<MeDto> {
+    const user = await this.db.user.findUniqueOrThrow({
+      where: { id: userId },
+      include: { profile: true },
+    });
+    if (!user.profile) throw new BadRequestException('Finish setting up your profile first');
+    await this.uploads.assertUploaded([url], userId, 'avatar');
+    return toMe(
+      await this.db.user.update({
+        where: { id: userId },
+        data: { profile: { update: { avatarUrl: url } } },
+        include: { profile: true },
+      }),
+    );
   }
 
   /** Banned or deactivated accounts read as not found. */

@@ -111,3 +111,29 @@ export async function makeUser(
   });
   return { id, auth: `Bearer ${res.body.accessToken}`, username, email };
 }
+
+// 1×1 transparent PNG
+export const PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=',
+  'base64',
+);
+
+/** Signs and actually PUTs a tiny PNG; returns the public URL. */
+export async function uploadPng(
+  app: INestApplication,
+  user: TestUser,
+  purpose: 'listing' | 'avatar' = 'listing',
+) {
+  const signed = await request(app.getHttpServer())
+    .post('/images/sign')
+    .set('Authorization', user.auth)
+    .send({ purpose, contentType: 'image/png', size: PNG.length })
+    .expect(201);
+  const put = await fetch(signed.body.uploadUrl, {
+    method: 'PUT',
+    body: PNG,
+    headers: { 'Content-Type': 'image/png' },
+  });
+  if (!put.ok) throw new Error(`PUT failed: ${put.status}`);
+  return signed.body.publicUrl as string;
+}
