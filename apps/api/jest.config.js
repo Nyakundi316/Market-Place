@@ -2,7 +2,7 @@
 module.exports = {
   rootDir: 'src',
   testRegex: /\.spec\.ts$/.source,
-  transform: { [/^.+\.ts$/.source]: ['ts-jest', { isolatedModules: true }] },
+  transform: { [/^.+\.ts$/.source]: 'ts-jest' },
   testEnvironment: 'node',
   setupFiles: ['<rootDir>/../test/setup-env.js'],
 };
