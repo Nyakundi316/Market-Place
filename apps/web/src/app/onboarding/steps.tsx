@@ -72,7 +72,15 @@ function useStepForm<S extends z.ZodType<FieldValues>>(
   return { form, onSubmit, error };
 }
 
-function StepFooter({ busy, onSkip, last }: { busy: boolean; onSkip?: () => void; last?: boolean }) {
+function StepFooter({
+  busy,
+  onSkip,
+  last,
+}: {
+  busy: boolean;
+  onSkip?: () => void;
+  last?: boolean;
+}) {
   return (
     <div className="flex items-center gap-3 pt-2">
       <Button type="submit" disabled={busy} className="min-w-32">
@@ -276,9 +284,7 @@ export function LocationStep({ me, onSaved, onSkip }: StepProps) {
                     {...field}
                   />
                 </FormControl>
-                <FormDescription>
-                  Kept private. Used later to verify your account.
-                </FormDescription>
+                <FormDescription>Kept private. Used later to verify your account.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
