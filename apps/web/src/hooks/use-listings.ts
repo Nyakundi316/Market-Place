@@ -122,3 +122,47 @@ export function useToggleFavorite() {
     onSettled: () => qc.invalidateQueries({ queryKey: ['listings', 'favorites'] }),
   });
 }
+
+type OwnerAction = 'publish' | 'sold' | 'boost' | 'delete';
+
+/** Seller-side actions on one listing; refreshes every list that might show it. */
+export function useListingAction() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, action }: { id: string; action: OwnerAction }): Promise<unknown> => {
+      switch (action) {
+        case 'publish':
+          return api<ListingDetailDto>(`/listings/${id}/publish`, { method: 'POST' });
+        case 'boost':
+          return api<ListingDetailDto>(`/listings/${id}/boost`, {
+            method: 'POST',
+            body: { days: 7 },
+          });
+        case 'sold':
+          return api<ListingDetailDto>(`/listings/${id}`, {
+            method: 'PATCH',
+            body: { status: 'sold' },
+          });
+        case 'delete':
+          return api<void>(`/listings/${id}`, { method: 'DELETE' });
+      }
+    },
+    onSuccess: (_, { action }) => {
+      toast.success(
+        {
+          publish: 'Your listing is live',
+          sold: 'Marked as sold',
+          boost: 'Boosted for 7 days',
+          delete: 'Listing deleted',
+        }[action],
+      );
+    },
+    onError: (err) =>
+      toast.error(err instanceof ApiError ? err.message : 'Something went wrong — try again'),
+    onSettled: () => {
+      void qc.invalidateQueries({ queryKey: ['listings'] });
+      void qc.invalidateQueries({ queryKey: ['listing'] });
+      void qc.invalidateQueries({ queryKey: ['me'] });
+    },
+  });
+}
