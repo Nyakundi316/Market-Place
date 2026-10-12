@@ -158,6 +158,7 @@ export const listingQuerySchema = cursorQuerySchema.extend({
   rating: z.coerce.number().min(0).max(5).optional(),
   verified: boolParam.optional(),
   sellerId: z.string().uuid().optional(),
+  featured: boolParam.optional(),
   sort: z.enum(LISTING_SORTS).optional(),
 });
 
