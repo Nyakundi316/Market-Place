@@ -1,9 +1,11 @@
 import type { INestApplication, Type } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import Redis from 'ioredis';
+import request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { configureApp } from '../src/bootstrap';
 import { loadEnv } from '../src/config/env.validation';
+import { PrismaService } from '../src/prisma/prisma.module';
 
 /** Boots the real AppModule with the production middleware stack. */
 export async function createApp(extraControllers: Type[] = []): Promise<INestApplication> {
@@ -63,4 +65,49 @@ export async function mailTo(to: string, subject: RegExp, timeoutMs = 5000) {
     await new Promise((r) => setTimeout(r, 150));
   }
   return null;
+}
+
+export interface TestUser {
+  id: string;
+  auth: string;
+  username: string;
+  email: string;
+}
+
+/**
+ * Registers through the real endpoint, then shortcuts the slow parts (email
+ * verification, onboarding, admin promotion) straight in the DB.
+ */
+export async function makeUser(
+  app: INestApplication,
+  opts: {
+    role?: 'buyer' | 'seller' | 'both' | 'admin';
+    verified?: boolean;
+    profile?: boolean;
+  } = {},
+): Promise<TestUser> {
+  const { role = 'both', verified = true, profile = true } = opts;
+  const email = uniqueEmail(role);
+  const res = await request(app.getHttpServer())
+    .post('/auth/register')
+    .send({ email, password: 'correct horse battery' });
+  if (res.status !== 201)
+    throw new Error(`register failed: ${res.status} ${JSON.stringify(res.body)}`);
+  const id = res.body.user.id as string;
+  const username = `t${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+
+  const db = app.get(PrismaService);
+  await db.user.update({
+    where: { id },
+    data: {
+      role,
+      isEmailVerified: verified,
+      ...(profile && {
+        profile: {
+          create: { displayName: `Test ${username}`, username, country: 'KE', city: 'Nairobi' },
+        },
+      }),
+    },
+  });
+  return { id, auth: `Bearer ${res.body.accessToken}`, username, email };
 }

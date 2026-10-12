@@ -29,9 +29,17 @@ export class JwtAuthGuard implements CanActivate {
       ctx.getHandler(),
       ctx.getClass(),
     ]);
-    if (isPublic) return true;
-
     const req = ctx.switchToHttp().getRequest<Request>();
+    if (isPublic) {
+      // Public reads still personalise (isFavorited, isOwner) when a valid token comes along.
+      await this.authenticate(req).catch(() => undefined);
+      return true;
+    }
+    await this.authenticate(req);
+    return true;
+  }
+
+  private async authenticate(req: Request) {
     const [scheme, token] = (req.header('authorization') ?? '').split(' ');
     if (scheme !== 'Bearer' || !token) throw new UnauthorizedException('Missing bearer token');
 
@@ -44,6 +52,5 @@ export class JwtAuthGuard implements CanActivate {
     if (user.isBanned) throw new ForbiddenException('This account has been suspended');
 
     req.user = { id: user.id, role: user.role, isEmailVerified: user.isEmailVerified };
-    return true;
   }
 }
