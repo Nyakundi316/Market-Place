@@ -13,6 +13,7 @@ import { EnvModule, loadEnv } from './config/env.validation';
 import { HealthController } from './health/health.controller';
 import { AuditModule } from './modules/audit/audit.service';
 import { AuthModule } from './modules/auth/auth.module';
+import { CategoriesModule } from './modules/categories/categories.module';
 import { MailModule } from './modules/mail/mail.service';
 import { UsersModule } from './modules/users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -29,6 +30,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     MailModule,
     AuthModule,
     UsersModule,
+    CategoriesModule,
     LoggerModule.forRootAsync({
       useFactory: () => {
         const env = loadEnv();

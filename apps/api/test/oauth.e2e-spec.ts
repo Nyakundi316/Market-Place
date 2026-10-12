@@ -153,7 +153,9 @@ describe('OAuth (e2e)', () => {
   });
 
   it('GET /auth/oauth lists only configured providers', async () => {
-    await http().get('/auth/oauth').expect(200, { providers: ['google'] });
+    await http()
+      .get('/auth/oauth')
+      .expect(200, { providers: ['google'] });
   });
 
   it('unconfigured provider → 404, unknown provider → 400', async () => {
