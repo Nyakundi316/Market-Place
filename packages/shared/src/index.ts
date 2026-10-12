@@ -7,3 +7,4 @@ export * from './schemas/pagination';
 export * from './schemas/uploads';
 export * from './types/auth';
 export * from './types/catalog';
+export * from './types/reviews';

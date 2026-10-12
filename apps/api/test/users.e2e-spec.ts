@@ -1,7 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { PrismaService } from '../src/prisma/prisma.module';
-import { createApp, resetRateLimits, uniqueEmail } from './helpers';
+import { createApp, makeUser, resetRateLimits, uniqueEmail } from './helpers';
 
 describe('Profile (e2e)', () => {
   let app: INestApplication;
@@ -159,6 +159,59 @@ describe('Profile (e2e)', () => {
       await http().patch('/me').set('Authorization', auth).send({ displayName: 'Gone', username });
       await db.user.update({ where: { id: userId }, data: { isBanned: true } });
       await http().get(`/users/${username}`).expect(404);
+    });
+  });
+
+  describe('follow', () => {
+    it('follow/unfollow is idempotent and shows on the profile', async () => {
+      const fan = await makeUser(app);
+      const star = await makeUser(app);
+      await http().post(`/users/${star.id}/follow`).expect(401);
+      for (let i = 0; i < 2; i++) {
+        await http()
+          .post(`/users/${star.id}/follow`)
+          .set('Authorization', fan.auth)
+          .expect(200)
+          .expect((r) => expect(r.body).toEqual({ following: true, followersCount: 1 }));
+      }
+      const seen = await http()
+        .get(`/users/${star.username}`)
+        .set('Authorization', fan.auth)
+        .expect(200);
+      expect(seen.body).toMatchObject({ followersCount: 1, isFollowing: true });
+      const anon = await http().get(`/users/${star.username}`).expect(200);
+      expect(anon.body.isFollowing).toBeNull();
+      const me = await http().get('/me').set('Authorization', fan.auth).expect(200);
+      expect(me.body.profile.followingCount).toBe(1);
+
+      await http()
+        .delete(`/users/${star.id}/follow`)
+        .set('Authorization', fan.auth)
+        .expect(200)
+        .expect((r) => expect(r.body).toEqual({ following: false, followersCount: 0 }));
+    });
+
+    it('400 for yourself, 404 for unknown or banned users', async () => {
+      const u = await makeUser(app);
+      await http().post(`/users/${u.id}/follow`).set('Authorization', u.auth).expect(400);
+      await http()
+        .post('/users/00000000-0000-4000-8000-000000000000/follow')
+        .set('Authorization', u.auth)
+        .expect(404);
+      const banned = await makeUser(app);
+      await db.user.update({ where: { id: banned.id }, data: { isBanned: true } });
+      await http().post(`/users/${banned.id}/follow`).set('Authorization', u.auth).expect(404);
+    });
+  });
+
+  describe('GET /users/:id/reviews', () => {
+    it('is public and empty for a new user; 400 for a bad id', async () => {
+      const u = await makeUser(app);
+      await http()
+        .get(`/users/${u.id}/reviews`)
+        .expect(200)
+        .expect((r) => expect(r.body).toEqual({ items: [], nextCursor: null }));
+      await http().get('/users/not-a-uuid/reviews').expect(400);
     });
   });
 });

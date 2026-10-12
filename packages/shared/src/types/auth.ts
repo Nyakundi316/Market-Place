@@ -39,6 +39,10 @@ export interface PublicProfileDto {
   completedDeals: number;
   responseRate: number;
   memberSince: string;
+  followersCount: number;
+  followingCount: number;
+  /** null when anonymous or looking at yourself */
+  isFollowing: boolean | null;
 }
 
 export interface MeDto {
