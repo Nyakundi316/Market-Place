@@ -14,6 +14,7 @@ import { HealthController } from './health/health.controller';
 import { AuditModule } from './modules/audit/audit.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { CategoriesModule } from './modules/categories/categories.module';
+import { ListingsModule } from './modules/listings/listings.module';
 import { MailModule } from './modules/mail/mail.service';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { UsersModule } from './modules/users/users.module';
@@ -33,6 +34,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     AuthModule,
     UsersModule,
     CategoriesModule,
+    ListingsModule,
     LoggerModule.forRootAsync({
       useFactory: () => {
         const env = loadEnv();
