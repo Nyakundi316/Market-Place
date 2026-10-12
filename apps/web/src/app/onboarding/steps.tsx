@@ -137,11 +137,14 @@ export function IdentityStep({ me, onSaved }: StepProps) {
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Username</FormLabel>
-                <FormControl>
-                  <div className="flex rounded-md border border-input shadow-sm focus-within:ring-1 focus-within:ring-ring">
-                    <span className="grid place-items-center border-r bg-muted px-3 text-sm text-muted-foreground">
-                      @
-                    </span>
+                <div className="flex rounded-md border border-input shadow-sm focus-within:ring-1 focus-within:ring-ring">
+                  <span
+                    aria-hidden
+                    className="grid place-items-center border-r bg-muted px-3 text-sm text-muted-foreground"
+                  >
+                    @
+                  </span>
+                  <FormControl>
                     <Input
                       autoComplete="username"
                       autoCapitalize="none"
@@ -149,8 +152,8 @@ export function IdentityStep({ me, onSaved }: StepProps) {
                       className="border-0 shadow-none focus-visible:ring-0"
                       {...field}
                     />
-                  </div>
-                </FormControl>
+                  </FormControl>
+                </div>
                 <FormDescription className="truncate">
                   markethub.app/u/{username?.toLowerCase() || 'yourname'}
                 </FormDescription>
