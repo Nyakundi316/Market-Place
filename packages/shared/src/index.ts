@@ -1,3 +1,4 @@
+export * from './countries';
 export * from './env';
 export * from './schemas/auth';
 export * from './schemas/profile';

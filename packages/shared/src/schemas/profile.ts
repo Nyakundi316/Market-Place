@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { isCountryCode } from '../countries';
 
 // Names that would let someone pose as staff or the platform itself.
 // 'admin' itself is taken by the seeded admin account.
@@ -33,6 +34,12 @@ export const usernameSchema = z
   )
   .refine((u) => !RESERVED_USERNAMES.has(u), 'That username is reserved');
 
+export const countrySchema = z
+  .string()
+  .length(2)
+  .toUpperCase()
+  .refine(isCountryCode, 'Unknown country code'); // ISO 3166-1 alpha-2
+
 const url = z.string().trim().url().max(500);
 const shortText = (max: number) => z.string().trim().max(max);
 
@@ -55,7 +62,7 @@ export const updateProfileSchema = z
     profession: shortText(80),
     company: shortText(80),
     website: url.or(z.literal('')),
-    country: z.string().length(2).toUpperCase(), // ISO 3166-1 alpha-2
+    country: countrySchema,
     city: shortText(80),
     phone: z.string().regex(/^\+[1-9]\d{6,14}$/, 'Use international format, e.g. +254712345678'),
     socials: socialsSchema,

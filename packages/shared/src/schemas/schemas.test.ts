@@ -60,3 +60,10 @@ describe('reserved usernames', () => {
     expect(result.error?.issues[0]?.message).toBe('That username is reserved');
   });
 });
+
+describe('country codes', () => {
+  it('accepts real ISO codes in any case and rejects made-up ones', () => {
+    expect(updateProfileSchema.parse({ country: 'ng' }).country).toBe('NG');
+    expect(updateProfileSchema.safeParse({ country: 'XX' }).success).toBe(false);
+  });
+});
