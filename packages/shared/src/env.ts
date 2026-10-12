@@ -40,6 +40,9 @@ const base = z.object({
   S3_ACCESS_KEY: optional,
   S3_SECRET_KEY: optional,
   S3_REGION: z.string().default('auto'),
+  // Documented extra: where uploaded objects are read from (CDN / R2 public domain).
+  // Defaults to path-style ${S3_ENDPOINT}/${S3_BUCKET}, which is what MinIO serves.
+  S3_PUBLIC_URL: optional.pipe(z.string().url().optional()),
 
   STRIPE_SECRET_KEY: optional,
   STRIPE_WEBHOOK_SECRET: optional,
