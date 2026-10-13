@@ -65,3 +65,37 @@ export const TYPE_LABEL: Record<string, string> = {
   job: 'Job',
   request: 'Wanted',
 };
+
+// ─── Chat timestamps (client-rendered only, so the local zone is fine) ────
+
+const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+const clock = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
+const weekday = new Intl.DateTimeFormat(undefined, { weekday: 'short' });
+const shortDate = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' });
+const longDate = new Intl.DateTimeFormat(undefined, {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+});
+
+/** Inbox column: "14:05", "Tue", "3 Oct". */
+export function chatTime(iso: string, now = new Date()) {
+  const d = new Date(iso);
+  const days = Math.round((startOfDay(now) - startOfDay(d)) / 86_400_000);
+  if (days <= 0) return clock.format(d);
+  if (days < 7) return weekday.format(d);
+  return shortDate.format(d);
+}
+
+export const messageTime = (iso: string) => clock.format(new Date(iso));
+
+/** Separator between days in a thread. */
+export function dayLabel(iso: string, now = new Date()) {
+  const days = Math.round((startOfDay(now) - startOfDay(new Date(iso))) / 86_400_000);
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Yesterday';
+  return longDate.format(new Date(iso));
+}
+
+export const sameDay = (a: string, b: string) =>
+  startOfDay(new Date(a)) === startOfDay(new Date(b));

@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { UnreadCount } from '@/components/chat/unread-count';
 import { cn } from '@/lib/utils';
 import { isActive, NAV } from './nav-items';
 
@@ -30,10 +31,15 @@ export function BottomNav() {
                     <Icon className="size-5" strokeWidth={2.5} />
                   </span>
                 ) : (
-                  <Icon
-                    className={cn('size-5', active && 'text-primary')}
-                    strokeWidth={active ? 2.25 : 1.75}
-                  />
+                  <span className="relative">
+                    <Icon
+                      className={cn('size-5', active && 'text-primary')}
+                      strokeWidth={active ? 2.25 : 1.75}
+                    />
+                    {href === '/chat' && (
+                      <UnreadCount variant="dot" className="absolute -right-0.5 -top-0.5" />
+                    )}
+                  </span>
                 )}
                 {label}
               </Link>

@@ -33,7 +33,7 @@ Tests: shared 25 · api unit 17 · api e2e 73 · web unit 2 files · Playwright 
 Tests: web unit 20 · api unit 17 · api e2e 123 · Playwright 24 (listings 8 + auth 16) against prod builds
 
 ## In progress — Phase 3 (Chat)
-3.1 shared chat schemas/DTOs + typed socket events ✅ → 3.2 chat REST (find-or-create, list, messages cursor, send, read; authz 404 for non-members; verified + profile to chat; 20/10s fixed window shared with socket) ✅ → 3.3 Socket.IO gateway (JWT handshake, redis adapter, rooms, presence, typing, receipts; integration tests) ✅ → 3.4 BullMQ + notify:offline worker ✅ → 3.5 web chat UI (/chat, /chat/[id]) → 3.6 gateway integration tests + chat E2E
+3.1 shared chat schemas/DTOs + typed socket events ✅ → 3.2 chat REST (find-or-create, list, messages cursor, send, read; authz 404 for non-members; verified + profile to chat; 20/10s fixed window shared with socket) ✅ → 3.3 Socket.IO gateway (JWT handshake, redis adapter, rooms, presence, typing, receipts; integration tests) ✅ → 3.4 BullMQ + notify:offline worker ✅ → 3.5 web chat UI (/chat, /chat/[id], /chat/new; realtime bridge, optimistic sends, receipts, typing, presence, photos, unread badges) ✅ → 3.6 gateway integration tests + chat E2E ✅
 
 Decisions:
 - Chat uploads use the existing presigned flow with a `chat` purpose (images + mp4)
@@ -43,6 +43,8 @@ Decisions:
 - Gateway re-reads the user on every send/read: bans cut the socket off, and verifying email mid-session works without reconnecting
 - Jobs run in the API process (`JobsService`); BullMQ forbids ':' in queue names, so §8 `notify:offline` = queue `notify`, job `offline`. Final failures go to a `dead-letter` queue
 - notify:offline is debounced by jobId `offline:{recipient}:{conversation}` + 60s delay; at run time it re-checks presence/unread, emails (HTML-escaped), and writes a `chat.message` Notification that doubles as the retry idempotency marker
+- Web connects Socket.IO straight to `NEXT_PUBLIC_API_URL` (inlined from `API_URL` at build; already in turbo's build env), since the /api rewrite can't upgrade WebSockets. Socket first with ack, REST fallback when disconnected
+- E2E helpers shared in `e2e/fixtures.ts` (verifiedUser, postListing, png)
 - New conversations get `lastMessageAt = now()` so they sort before their first message; the trigger takes over after
 
 ## Blockers / decisions

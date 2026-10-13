@@ -1,3 +1,4 @@
+import { RealtimeBridge } from '@/components/chat/realtime-bridge';
 import { AccountMenu } from '@/components/shell/account-menu';
 import { BottomNav } from '@/components/shell/bottom-nav';
 import { Sidebar } from '@/components/shell/sidebar';
@@ -30,6 +31,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       <BottomNav />
+      <RealtimeBridge />
     </div>
   );
 }

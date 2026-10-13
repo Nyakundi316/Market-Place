@@ -24,7 +24,7 @@ async function resize(file: File, maxEdge: number, quality: number): Promise<Blo
   );
 }
 
-async function put(blob: Blob, purpose: 'listing' | 'avatar') {
+async function put(blob: Blob, purpose: 'listing' | 'avatar' | 'chat') {
   const contentType = blob.type as 'image/webp' | 'image/jpeg';
   const signed = await api<PresignedUploadDto>('/images/sign', {
     method: 'POST',
@@ -50,6 +50,24 @@ export async function uploadListingPhoto(file: File) {
 
 export async function uploadAvatar(file: File) {
   return put(await resize(file, 512, 0.85), 'avatar');
+}
+
+/** Chat photos: one resized copy, with dimensions so the bubble can reserve space. */
+export async function uploadChatPhoto(file: File) {
+  const blob = await resize(file, FULL_EDGE, 0.8);
+  const { width, height } = await createImageBitmap(blob).then((b) => {
+    const size = { width: b.width, height: b.height };
+    b.close();
+    return size;
+  });
+  const url = await put(blob, 'chat');
+  return {
+    url,
+    contentType: blob.type as 'image/webp' | 'image/jpeg',
+    size: blob.size,
+    width,
+    height,
+  };
 }
 
 export const ACCEPTED_IMAGES = 'image/jpeg,image/png,image/webp';

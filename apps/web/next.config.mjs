@@ -15,6 +15,9 @@ const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   reactStrictMode: true,
+  // Socket.IO can't go through the /api rewrite (no WebSocket upgrade), so the
+  // browser needs the API's public origin. Inlined at build time from API_URL.
+  env: { NEXT_PUBLIC_API_URL: process.env.API_URL ?? 'http://localhost:3001' },
   poweredByHeader: false,
   // Same-origin proxy so auth cookies stay first-party (see PROJECT_BRIEF §3 addendum).
   async rewrites() {

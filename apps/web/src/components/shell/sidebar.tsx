@@ -3,6 +3,7 @@
 import { Plus } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { UnreadCount } from '@/components/chat/unread-count';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { AccountMenu } from './account-menu';
@@ -37,6 +38,7 @@ export function Sidebar() {
               {active && <span className="absolute inset-y-2 -left-3 w-1 rounded-r bg-primary" />}
               <Icon className="size-[18px]" strokeWidth={active ? 2.25 : 1.75} />
               {label}
+              {href === '/chat' && <UnreadCount variant="count" className="ml-auto" />}
             </Link>
           );
         })}
