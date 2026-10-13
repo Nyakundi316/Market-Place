@@ -32,7 +32,17 @@ Tests: shared 25 · api unit 17 · api e2e 73 · web unit 2 files · Playwright 
 
 Tests: web unit 20 · api unit 17 · api e2e 123 · Playwright 24 (listings 8 + auth 16) against prod builds
 
+## In progress — Phase 3 (Chat)
+3.1 shared chat schemas/DTOs + typed socket events ✅ → 3.2 chat REST (find-or-create, list, messages cursor, send, read; authz 404 for non-members; verified + profile to chat; 20/10s fixed window shared with socket) ✅ → 3.3 Socket.IO gateway (JWT handshake, redis adapter, rooms, presence, typing, receipts) → 3.4 BullMQ + notify:offline worker → 3.5 web chat UI (/chat, /chat/[id]) → 3.6 gateway integration tests + chat E2E
+
+Decisions:
+- Chat uploads use the existing presigned flow with a `chat` purpose (images + mp4)
+- Presence key is a per-user socket counter with the §5 60s TTL, so closing one of two tabs doesn't show you offline
+- `ConversationDto.counterpart.online` comes from Redis so the UI has presence before the first `presence:update`
+- New conversations get `lastMessageAt = now()` so they sort before their first message; the trigger takes over after
+
 ## Blockers / decisions
+- `@RateLimit('auth')` (10/min/IP) covers credential endpoints only; refresh/logout/provider list are on the global limit (CGNAT would otherwise sign users out)
 - Locally the 8 GB machine swaps during E2E (argon2 + Chromium + Docker); `/health` hit 5s. Run E2E against `pnpm build` + `start`, not `pnpm dev`
 - Escrow model (Phase 5): default is charge-now + platform-held funds + Connect transfer on release, since card auths expire in ~7 days
 - Webhook idempotency (§7) will need a `WebhookEvent(eventId uniq)` table in Phase 5 — to be documented then

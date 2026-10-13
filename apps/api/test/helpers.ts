@@ -122,7 +122,7 @@ export const PNG = Buffer.from(
 export async function uploadPng(
   app: INestApplication,
   user: TestUser,
-  purpose: 'listing' | 'avatar' = 'listing',
+  purpose: 'listing' | 'avatar' | 'chat' = 'listing',
 ) {
   const signed = await request(app.getHttpServer())
     .post('/images/sign')
