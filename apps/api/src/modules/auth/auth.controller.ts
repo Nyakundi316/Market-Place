@@ -42,8 +42,12 @@ const metaOf = (req: Request): SessionMeta => ({
   ipAddress: req.ip,
 });
 
+/**
+ * Credential endpoints get the strict per-IP `auth` bucket. Refresh and logout
+ * don't: they need an unguessable cookie, and many users share an IP behind
+ * carrier NAT — a shared 10/min there would sign people out.
+ */
 @Public()
-@RateLimit('auth')
 @Controller('auth')
 export class AuthController {
   private readonly secureCookies: boolean;
@@ -57,6 +61,7 @@ export class AuthController {
     this.secureCookies = env.NODE_ENV === 'production';
   }
 
+  @RateLimit('auth')
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
   async verifyEmail(@Body(new ZodValidationPipe(verifyEmailSchema)) body: VerifyEmailInput) {
@@ -64,6 +69,7 @@ export class AuthController {
     return { verified: true };
   }
 
+  @RateLimit('auth')
   @Post('forgot-password')
   @HttpCode(HttpStatus.ACCEPTED)
   async forgotPassword(
@@ -73,6 +79,7 @@ export class AuthController {
     return { message: 'If that email has an account, a reset link is on its way.' };
   }
 
+  @RateLimit('auth')
   @Post('reset-password')
   @HttpCode(HttpStatus.NO_CONTENT)
   async resetPassword(
@@ -82,6 +89,7 @@ export class AuthController {
     await this.links.resetPassword(body.token, body.password, req.ip);
   }
 
+  @RateLimit('auth')
   @Post('register')
   async register(
     @Body(new ZodValidationPipe(registerSchema)) body: RegisterInput,
@@ -91,6 +99,7 @@ export class AuthController {
     return this.respond(res, await this.auth.register(body, metaOf(req)));
   }
 
+  @RateLimit('auth')
   @Post('login')
   @HttpCode(HttpStatus.OK)
   async login(

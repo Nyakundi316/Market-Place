@@ -17,7 +17,6 @@ const sameString = (a: string, b: string) =>
   a.length === b.length && timingSafeEqual(Buffer.from(a), Buffer.from(b));
 
 @Public()
-@RateLimit('auth')
 @Controller('auth/oauth')
 export class OAuthController {
   private readonly logger = new Logger(OAuthController.name);
@@ -36,6 +35,7 @@ export class OAuthController {
     return { providers: this.oauth.enabledProviders() };
   }
 
+  @RateLimit('auth')
   @Get(':provider')
   start(@Param('provider', providerPipe) provider: OAuthProvider, @Res() res: Response) {
     const client = this.oauth.client(provider);
@@ -54,6 +54,7 @@ export class OAuthController {
   }
 
   /** Always ends in a redirect to the web app — the user arrives here by browser navigation. */
+  @RateLimit('auth')
   @Get(':provider/callback')
   async callback(
     @Param('provider', providerPipe) provider: OAuthProvider,

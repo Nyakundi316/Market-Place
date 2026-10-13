@@ -127,6 +127,17 @@ describe('Auth (e2e)', () => {
       expect(res.body.accessToken).toBeDefined();
     });
 
+    it('is not on the per-IP credential bucket: a busy NAT IP keeps its sessions', async () => {
+      const { email, cookies } = await register(); // 1 of 10
+      for (let i = 0; i < 9; i++) {
+        await http().post('/auth/login').send({ email, password: 'wrong password!' }).expect(401);
+      }
+      await http().post('/auth/login').send({ email, password: PASSWORD }).expect(429);
+
+      await refresh(cookies).expect(200);
+      await http().get('/auth/oauth').expect(200);
+    });
+
     it('403 without a matching CSRF header', async () => {
       const { cookies } = await register();
       await refresh(cookies, '').expect(403);
