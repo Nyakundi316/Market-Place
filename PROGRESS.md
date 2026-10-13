@@ -36,5 +36,5 @@ Tests: web unit 20 · api unit 17 · api e2e 123 · Playwright 24 (listings 8 + 
 - Locally the 8 GB machine swaps during E2E (argon2 + Chromium + Docker); `/health` hit 5s. Run E2E against `pnpm build` + `start`, not `pnpm dev`
 - Escrow model (Phase 5): default is charge-now + platform-held funds + Connect transfer on release, since card auths expire in ~7 days
 - Webhook idempotency (§7) will need a `WebhookEvent(eventId uniq)` table in Phase 5 — to be documented then
-- Commits are local only; nothing has been pushed to `origin` (CI runs once pushed)
+- `main` is pushed to `origin`; CI runs on every push
 - Stitch MCP not connected; UI follows §6 + CLAUDE.md design rules directly
