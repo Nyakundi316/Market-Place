@@ -112,9 +112,11 @@ describe('Email verification & password reset (e2e)', () => {
       await http().post('/auth/forgot-password').send({ email });
       const first = await mailTo(email, /Reset/);
       await http().post('/auth/forgot-password').send({ email });
-      // wait for the second message (a different token)
+      // Mail goes out in the background; mailTo returns the newest match as soon as
+      // one exists, so keep polling (with a pause) until the second token lands.
       let second = first;
-      for (let i = 0; i < 20 && second?.token === first?.token; i++) {
+      for (let i = 0; i < 40 && second?.token === first?.token; i++) {
+        await new Promise((r) => setTimeout(r, 150));
         second = await mailTo(email, /Reset/);
       }
       expect(second?.token).not.toBe(first?.token);
