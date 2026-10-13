@@ -126,7 +126,7 @@ describe('OAuth (e2e)', () => {
   });
 
   it('rejects a forged state or a missing state cookie', async () => {
-    const forged = await signIn(identity(), (s) => `${s.slice(0, -1)}x`);
+    const forged = await signIn(identity(), (s) => s.slice(0, -1) + (s.endsWith('x') ? 'y' : 'x'));
     expect(forged.headers.location).toBe('http://localhost:3000/login?error=oauth_failed');
 
     const noCookie = await http()

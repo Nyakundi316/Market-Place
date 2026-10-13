@@ -64,22 +64,42 @@ describe('TokenService', () => {
       await expect(tokens.rotate(second)).resolves.toMatchObject({ userId });
     });
 
-    it('reusing a spent token revokes the whole family', async () => {
+    it('replaying a spent token after its successor was used revokes the whole family', async () => {
       const first = await tokens.issueRefresh(userId);
       const { refreshToken: second } = await tokens.rotate(first);
+      const { refreshToken: third } = await tokens.rotate(second);
 
       await expect(tokens.rotate(first)).rejects.toThrow('Session revoked'); // attacker replays
-      await expect(tokens.rotate(second)).rejects.toThrow('Session revoked'); // legit holder is out too
+      await expect(tokens.rotate(third)).rejects.toThrow('Session revoked'); // legit holder is out too
     });
 
-    it('concurrent refreshes with the same token: exactly one wins', async () => {
+    it('a lost refresh response can be retried with the spent token inside the grace window', async () => {
+      const first = await tokens.issueRefresh(userId);
+      await tokens.rotate(first); // response never reached the browser
+      const { refreshToken: retried } = await tokens.rotate(first);
+      await expect(tokens.rotate(retried)).resolves.toMatchObject({ userId });
+    });
+
+    it('replaying a spent token after the grace window revokes the family', async () => {
+      const first = await tokens.issueRefresh(userId);
+      const { refreshToken: second } = await tokens.rotate(first);
+      await db.refreshToken.updateMany({
+        where: { userId, usedAt: { not: null }, revokedAt: null },
+        data: { usedAt: new Date(Date.now() - 60_000) },
+      });
+      await expect(tokens.rotate(first)).rejects.toThrow('Session revoked');
+      await expect(tokens.rotate(second)).rejects.toThrow('Session revoked');
+    });
+
+    it('concurrent refreshes with the same token: one consumes it, none get logged out', async () => {
       const rt = await tokens.issueRefresh(userId);
-      const results = await Promise.allSettled([
-        tokens.rotate(rt),
-        tokens.rotate(rt),
-        tokens.rotate(rt),
-      ]);
-      expect(results.filter((r) => r.status === 'fulfilled')).toHaveLength(1);
+      const results = await Promise.all([tokens.rotate(rt), tokens.rotate(rt), tokens.rotate(rt)]);
+      expect(new Set(results.map((r) => r.refreshToken)).size).toBe(3);
+      const row = await db.refreshToken.findFirstOrThrow({
+        where: { userId, usedAt: { not: null } },
+        orderBy: { usedAt: 'desc' },
+      });
+      expect(row.revokedAt).toBeNull();
     });
 
     it('rejects expired and unknown tokens', async () => {

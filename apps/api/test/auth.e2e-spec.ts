@@ -133,9 +133,16 @@ describe('Auth (e2e)', () => {
       await refresh(cookies, 'x'.repeat(cookies.mh_csrf!.length)).expect(403);
     });
 
-    it('401 and cookies cleared when a spent token is replayed', async () => {
+    it('a retry with the just-spent cookie succeeds (response was lost)', async () => {
       const { cookies } = await register();
       await refresh(cookies).expect(200);
+      await refresh(cookies).expect(200);
+    });
+
+    it('401 and cookies cleared when a spent token is replayed after the chain moved on', async () => {
+      const { cookies } = await register();
+      const next = { ...cookies, ...cookiesFrom(await refresh(cookies).expect(200)) };
+      await refresh(next).expect(200);
       const replay = await refresh(cookies).expect(401);
       expect(cookiesFrom(replay).mh_rt).toBe('');
     });

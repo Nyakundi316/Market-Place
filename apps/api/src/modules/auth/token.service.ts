@@ -17,6 +17,7 @@ export interface SessionMeta {
 
 const ISSUER = 'markethub-api';
 const AUDIENCE = 'markethub';
+const REUSE_GRACE_MS = 15_000;
 
 @Injectable()
 export class TokenService {
@@ -78,30 +79,52 @@ export class TokenService {
 
   /**
    * Single-use rotation (§9). Presenting a token that was already used or
-   * revoked means it leaked: the whole family (every descendant) is revoked.
+   * revoked means it leaked: the whole family (every descendant) is revoked —
+   * except within the reuse grace window, see `inGrace`.
    */
   async rotate(token: string, meta: SessionMeta = {}) {
     const row = await this.db.refreshToken.findUnique({ where: { tokenHash: this.hash(token) } });
     if (!row) throw new UnauthorizedException('Invalid session');
 
-    if (row.usedAt || row.revokedAt) {
-      await this.revokeFamily(row.familyId);
-      throw new UnauthorizedException('Session revoked');
+    let usedAt = row.usedAt;
+    if (!row.revokedAt && !usedAt) {
+      if (row.expiresAt <= new Date()) throw new UnauthorizedException('Session expired');
+      // Conditional update: of concurrent refreshes exactly one consumes the token.
+      const { count } = await this.db.refreshToken.updateMany({
+        where: { id: row.id, usedAt: null, revokedAt: null },
+        data: { usedAt: new Date() },
+      });
+      if (count === 1) {
+        return {
+          userId: row.userId,
+          refreshToken: await this.issueRefresh(row.userId, meta, row.familyId),
+        };
+      }
+      usedAt = (await this.db.refreshToken.findUnique({ where: { id: row.id } }))?.usedAt ?? null;
     }
-    if (row.expiresAt <= new Date()) throw new UnauthorizedException('Session expired');
 
-    // Conditional update makes concurrent refreshes race-safe: exactly one wins.
-    const { count } = await this.db.refreshToken.updateMany({
-      where: { id: row.id, usedAt: null, revokedAt: null },
-      data: { usedAt: new Date() },
+    if (!row.revokedAt && usedAt && (await this.inGrace(row.familyId, usedAt))) {
+      return {
+        userId: row.userId,
+        refreshToken: await this.issueRefresh(row.userId, meta, row.familyId),
+      };
+    }
+    await this.revokeFamily(row.familyId);
+    throw new UnauthorizedException('Session revoked');
+  }
+
+  /**
+   * A refresh whose response never reached the browser (navigation, closed tab,
+   * flaky network) still rotated the token, so the client retries with the spent
+   * one. Tolerate that briefly — but only while nothing later in the chain has
+   * been redeemed; once the successor is used, a replay is theft.
+   */
+  private async inGrace(familyId: string, usedAt: Date) {
+    if (Date.now() - usedAt.getTime() > REUSE_GRACE_MS) return false;
+    const movedOn = await this.db.refreshToken.count({
+      where: { familyId, OR: [{ revokedAt: { not: null } }, { usedAt: { gt: usedAt } }] },
     });
-    if (count !== 1) {
-      await this.revokeFamily(row.familyId);
-      throw new UnauthorizedException('Session revoked');
-    }
-
-    const next = await this.issueRefresh(row.userId, meta, row.familyId);
-    return { userId: row.userId, refreshToken: next };
+    return movedOn === 0;
   }
 
   /** Logout: kills this device's session chain. Unknown tokens are a no-op. */

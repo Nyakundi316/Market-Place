@@ -93,7 +93,8 @@ export async function signUp(page: Page, opts: { email?: string; password?: stri
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Create account' }).click();
-  await expect(page).toHaveURL(/\/onboarding/);
+  // argon2id is slow on purpose; the first hash on a cold API takes ~5s.
+  await expect(page).toHaveURL(/\/onboarding/, { timeout: 15_000 });
   return { email, password };
 }
 

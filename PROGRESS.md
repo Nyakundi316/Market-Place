@@ -28,11 +28,11 @@ Tests: shared 25 · api unit 17 · api e2e 73 · web unit 2 files · Playwright 
 - **2.10** `/u/[username]` profile (listings/reviews tabs, follow), `/seller` dashboard (status tabs, manage menu), `/saved`, `/settings` (photo, profile, role); account menu links
 - **2.11** `e2e/listings.spec.ts`: post with photos → buyer search/save/open/follow; drafts private + publish needs a photo + delete; category/search; settings
 - Fixes found by E2E: country names now deterministic across Node/Chrome ICU (hydration #425/#422 on `/c/*`); card heart was covered by the stretched title link (unclickable); profile counts/follow state came from the anonymous 60s server cache and never refetched
+- Refresh reuse grace window (15s, only while the chain hasn't moved on): an aborted refresh no longer logs the user out; brief §3 addendum updated. Also de-flaked the OAuth forged-state test (tamper was a no-op when state ended in `x`)
 
-Tests: web unit 20 · api unit 17 · Playwright 23/24 against prod builds — the 1 intermittent failure is the refresh-abort issue below
+Tests: web unit 20 · api unit 17 · api e2e 123 · Playwright 24 (listings 8 + auth 16) against prod builds
 
 ## Blockers / decisions
-- **Open (needs decision):** a refresh request aborted mid-flight (navigation/tab close) still rotates the token server-side; the browser keeps the old cookie, its next refresh counts as reuse and the family is revoked → user logged out. Proposed fix: short reuse grace window in `TokenService.rotate` (brief §3 addendum currently says reuse always revokes)
 - Locally the 8 GB machine swaps during E2E (argon2 + Chromium + Docker); `/health` hit 5s. Run E2E against `pnpm build` + `start`, not `pnpm dev`
 - Escrow model (Phase 5): default is charge-now + platform-held funds + Connect transfer on release, since card auths expire in ~7 days
 - Webhook idempotency (§7) will need a `WebhookEvent(eventId uniq)` table in Phase 5 — to be documented then
