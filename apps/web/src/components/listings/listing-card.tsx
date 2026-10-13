@@ -83,7 +83,7 @@ export function ListingCard({
           </span>
         )}
       </Link>
-      {!showStatus && <FavoriteButton listing={l} className="absolute right-2 top-2" />}
+      {!showStatus && <FavoriteButton listing={l} className="absolute right-2 top-2 z-10" />}
 
       <div className="mt-2 min-w-0 px-0.5">
         <p className="tabular text-[15px] font-semibold leading-tight">

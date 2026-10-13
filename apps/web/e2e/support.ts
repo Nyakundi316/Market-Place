@@ -98,10 +98,15 @@ export async function signUp(page: Page, opts: { email?: string; password?: stri
 }
 
 /** Finishes step 1 only; the rest is skippable. */
-export async function createProfile(page: Page, displayName = 'Wanjiru Test') {
+export async function createProfile(
+  page: Page,
+  displayName = 'Wanjiru Test',
+  role?: 'Buying' | 'Selling' | 'Both',
+) {
   const username = uniqueHandle();
   await page.getByLabel('Display name').fill(displayName);
   await page.getByLabel('Username').fill(username);
+  if (role) await page.getByRole('radio', { name: role }).check({ force: true });
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByRole('heading', { name: 'Where do you trade?' })).toBeVisible();
   return username;

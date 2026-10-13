@@ -22,10 +22,18 @@ _Last updated: 2026-10-13_
 
 Tests: shared 25 · api unit 17 · api e2e 73 · web unit 2 files · Playwright 16 — all green, 0 lint warnings
 
-## In progress — Phase 2 (Listings)
-2.1 shared listing/category schemas → 2.2 categories API → 2.3 listings CRUD + publish → 2.4 presigned uploads (+ MinIO in compose, `POST /me/avatar`) → 2.5 search (FTS + trigram, filters, cursor) → 2.6 favourites, follow, boost → 2.7 web feed/category/search → 2.8 listing detail → 2.9 create wizard → 2.10 profile + seller pages → 2.11 E2E
+## Shipped — Phase 2 (Listings) ✅
+- **2.1–2.8** shared listing/category schemas, categories API, listings CRUD + publish, presigned uploads (SeaweedFS S3 in compose, `POST /me/avatar`), search (FTS + trigram, filters, cursor), favourites/follow/boost, feed/category/search pages, listing detail with owner actions
+- **2.9** `/create` 5-step wizard (type+category → details → photos → location+price → review), drafts or publish; client-side resize before upload (`lib/images.ts`, `photo-uploader.tsx`)
+- **2.10** `/u/[username]` profile (listings/reviews tabs, follow), `/seller` dashboard (status tabs, manage menu), `/saved`, `/settings` (photo, profile, role); account menu links
+- **2.11** `e2e/listings.spec.ts`: post with photos → buyer search/save/open/follow; drafts private + publish needs a photo + delete; category/search; settings
+- Fixes found by E2E: country names now deterministic across Node/Chrome ICU (hydration #425/#422 on `/c/*`); card heart was covered by the stretched title link (unclickable); profile counts/follow state came from the anonymous 60s server cache and never refetched
+
+Tests: web unit 20 · api unit 17 · Playwright 23/24 against prod builds — the 1 intermittent failure is the refresh-abort issue below
 
 ## Blockers / decisions
+- **Open (needs decision):** a refresh request aborted mid-flight (navigation/tab close) still rotates the token server-side; the browser keeps the old cookie, its next refresh counts as reuse and the family is revoked → user logged out. Proposed fix: short reuse grace window in `TokenService.rotate` (brief §3 addendum currently says reuse always revokes)
+- Locally the 8 GB machine swaps during E2E (argon2 + Chromium + Docker); `/health` hit 5s. Run E2E against `pnpm build` + `start`, not `pnpm dev`
 - Escrow model (Phase 5): default is charge-now + platform-held funds + Connect transfer on release, since card auths expire in ~7 days
 - Webhook idempotency (§7) will need a `WebhookEvent(eventId uniq)` table in Phase 5 — to be documented then
 - Commits are local only; nothing has been pushed to `origin` (CI runs once pushed)

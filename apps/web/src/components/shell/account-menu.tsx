@@ -1,7 +1,7 @@
 'use client';
 
 import { useQueryClient } from '@tanstack/react-query';
-import { LogOut, Settings, UserRound } from 'lucide-react';
+import { Heart, LayoutList, LogOut, Settings, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ProfileAvatar } from '@/components/profile-avatar';
@@ -79,6 +79,16 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
         <DropdownMenuItem asChild>
           <Link href={profileHref}>
             <UserRound /> {me?.profile ? 'Profile' : 'Set up profile'}
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/seller">
+            <LayoutList /> Your listings
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/saved">
+            <Heart /> Saved
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
