@@ -15,6 +15,7 @@ import { AuditModule } from './modules/audit/audit.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { ChatModule } from './modules/chat/chat.module';
+import { JobsModule } from './modules/jobs/jobs.module';
 import { ListingsModule } from './modules/listings/listings.module';
 import { MailModule } from './modules/mail/mail.service';
 import { UploadsModule } from './modules/uploads/uploads.module';
@@ -31,6 +32,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     PrismaModule,
     AuditModule,
     MailModule,
+    JobsModule,
     UploadsModule,
     AuthModule,
     UsersModule,

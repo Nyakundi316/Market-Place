@@ -29,6 +29,7 @@ import {
   toConversation,
   toMessage,
 } from './chat.mapper';
+import { OfflineNotifier } from './offline-notifier';
 import { RealtimeService } from './realtime.service';
 
 type Cursor = { t: string; id: string };
@@ -53,6 +54,7 @@ export class ChatService {
     private readonly db: PrismaService,
     private readonly uploads: UploadsService,
     private readonly realtime: RealtimeService,
+    private readonly offline: OfflineNotifier,
     @InjectRedis() private readonly redis: Redis,
   ) {}
 
@@ -219,6 +221,12 @@ export class ChatService {
       }),
     );
     this.realtime.toConversation(conversation.id, 'message:new', message);
+
+    const recipientId =
+      conversation.buyerId === user.id ? conversation.sellerId : conversation.buyerId;
+    if (!(await this.realtime.online([recipientId])).size) {
+      await this.offline.enqueue({ recipientId, conversationId: conversation.id });
+    }
     return message;
   }
 
