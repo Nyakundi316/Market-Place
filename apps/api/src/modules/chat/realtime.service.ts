@@ -1,5 +1,5 @@
-import { Injectable } from '@nestjs/common';
-import type { ClientToServerEvents, ServerToClientEvents } from '@markethub/shared';
+import { Injectable, type OnModuleDestroy } from '@nestjs/common';
+import type { ClientToServerEvents, PresenceStatus, ServerToClientEvents } from '@markethub/shared';
 import type Redis from 'ioredis';
 import type { Server } from 'socket.io';
 import { InjectRedis } from '../../redis/redis.module';
@@ -17,13 +17,21 @@ export const PRESENCE_TTL_S = 60;
  * a gateway) broadcasts are no-ops. Rooms span instances via the Redis adapter.
  */
 @Injectable()
-export class RealtimeService {
+export class RealtimeService implements OnModuleDestroy {
   private server: ChatServer | null = null;
 
   constructor(@InjectRedis() private readonly redis: Redis) {}
 
   attach(server: ChatServer) {
     this.server = server;
+  }
+
+  /**
+   * Nest runs this before disposing the socket adapter; sockets closing after
+   * that would otherwise publish through Redis clients that are already gone.
+   */
+  onModuleDestroy() {
+    this.server = null;
   }
 
   toConversation<E extends keyof ServerToClientEvents>(
@@ -40,6 +48,15 @@ export class RealtimeService {
     ...args: Parameters<ServerToClientEvents[E]>
   ) {
     this.server?.to(userRoom(userId)).emit(event, ...args);
+  }
+
+  /** Tells the people a user is talking to (not the user) that they came or went. */
+  presence(userId: string, status: PresenceStatus, conversationIds: string[]) {
+    if (!conversationIds.length) return;
+    this.server
+      ?.to(conversationIds.map(convRoom))
+      .except(userRoom(userId))
+      .emit('presence:update', { userId, status });
   }
 
   /** Puts every live socket of these users into a conversation room. */
