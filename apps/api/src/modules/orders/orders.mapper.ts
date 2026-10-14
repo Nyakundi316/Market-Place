@@ -12,6 +12,7 @@ import { dealListing, dealParty, toDealListing, toParty } from '../offers/offers
 
 export const orderInclude = {
   listing: dealListing,
+  offer: { select: { conversationId: true } },
   buyer: dealParty,
   seller: dealParty,
 } satisfies Prisma.OrderInclude;
@@ -30,6 +31,7 @@ export function toOrderListItem(o: OrderRow, viewerId: string): OrderListItemDto
     status: o.status,
     listing: toDealListing(o.listing),
     offerId: o.offerId,
+    conversationId: o.offer?.conversationId ?? null,
     buyer: toParty(o.buyer),
     seller: toParty(o.seller),
     quantity: o.quantity,

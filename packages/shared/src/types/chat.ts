@@ -1,4 +1,4 @@
-import type { Currency } from '../schemas/catalog';
+import type { Currency, ListingType } from '../schemas/catalog';
 import type {
   Attachment,
   MessageType,
@@ -32,6 +32,8 @@ export interface ConversationDto {
     id: string;
     slug: string;
     title: string;
+    /** On a `request` listing the poster is the one buying. */
+    type: ListingType;
     status: ListingStatus;
     price: string | null;
     currency: Currency;

@@ -60,6 +60,8 @@ export interface OrderDto {
   status: OrderStatus;
   listing: DealListingDto;
   offerId: string | null;
+  /** The chat the deal was struck in. */
+  conversationId: string | null;
   buyer: DealPartyDto;
   seller: DealPartyDto;
   quantity: number;

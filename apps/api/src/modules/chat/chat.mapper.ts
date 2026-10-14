@@ -3,6 +3,7 @@ import type {
   ConversationDto,
   Currency,
   ListingStatus,
+  ListingType,
   MessageDto,
 } from '@markethub/shared';
 import type { Message, Prisma } from '@prisma/client';
@@ -15,6 +16,7 @@ export const conversationInclude = {
       id: true,
       slug: true,
       title: true,
+      type: true,
       status: true,
       price: true,
       currency: true,
@@ -59,6 +61,7 @@ export function toConversation(
       id: c.listing.id,
       slug: c.listing.slug,
       title: c.listing.title,
+      type: c.listing.type as ListingType,
       status: c.listing.status as ListingStatus,
       price: c.listing.price?.toFixed(2) ?? null,
       currency: c.listing.currency as Currency,
