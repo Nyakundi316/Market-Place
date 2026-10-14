@@ -17,6 +17,7 @@ import type {
   StartConversationInput,
 } from '@markethub/shared';
 import { Prisma, type Message } from '@prisma/client';
+import { decodeCursor as decode, encodeCursor as encode } from '../../common/cursor';
 import type { RequestUser } from '../../common/decorators/current-user.decorator';
 import { POLICIES } from '../../common/rate-limit/rate-limit.service';
 import type Redis from 'ioredis';
@@ -31,20 +32,6 @@ import {
 } from './chat.mapper';
 import { OfflineNotifier } from './offline-notifier';
 import { RealtimeService } from './realtime.service';
-
-type Cursor = { t: string; id: string };
-const encode = (c: Cursor) => Buffer.from(JSON.stringify(c)).toString('base64url');
-function decode(raw: string | undefined): Cursor | null {
-  if (!raw) return null;
-  try {
-    const c = JSON.parse(Buffer.from(raw, 'base64url').toString()) as Cursor;
-    if (typeof c?.t === 'string' && typeof c.id === 'string' && !Number.isNaN(Date.parse(c.t)))
-      return c;
-  } catch {
-    /* fall through */
-  }
-  throw new BadRequestException({ message: 'Invalid cursor', fields: { cursor: ['Invalid'] } });
-}
 
 const member = (userId: string) => ({ OR: [{ buyerId: userId }, { sellerId: userId }] });
 
@@ -295,7 +282,7 @@ export class ChatService {
   }
 
   /** Same bar as publishing: a confirmed inbox and a profile people can see. */
-  private async assertCanChat(user: RequestUser) {
+  async assertCanChat(user: RequestUser) {
     if (!user.isEmailVerified) throw new ForbiddenException('Confirm your email to send messages');
     const profile = await this.db.profile.findUnique({
       where: { userId: user.id },

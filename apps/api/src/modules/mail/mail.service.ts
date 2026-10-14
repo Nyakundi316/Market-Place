@@ -12,7 +12,8 @@ export interface MailMessage {
 
 /**
  * Resend in production (plain HTTPS call, no SDK); SMTP → Mailhog everywhere
- * else. Moves behind the email:send BullMQ queue in Phase 4 (§8).
+ * else. Notification mail goes through the email:send queue (NotificationsService);
+ * auth mail stays direct so a link arrives even if Redis is down.
  */
 @Injectable()
 export class MailService {

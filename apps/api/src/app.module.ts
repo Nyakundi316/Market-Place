@@ -18,6 +18,7 @@ import { ChatModule } from './modules/chat/chat.module';
 import { JobsModule } from './modules/jobs/jobs.module';
 import { ListingsModule } from './modules/listings/listings.module';
 import { MailModule } from './modules/mail/mail.service';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { UsersModule } from './modules/users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -39,6 +40,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     CategoriesModule,
     ListingsModule,
     ChatModule,
+    NotificationsModule,
     LoggerModule.forRootAsync({
       useFactory: () => {
         const env = loadEnv();
