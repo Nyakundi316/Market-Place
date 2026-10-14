@@ -45,3 +45,9 @@ export function orderTotals(unitPrice: string, quantity: number, feePercent: num
     sellerNet: fromCents(toCents(subtotal) - toCents(platformFee)),
   };
 }
+
+/** "1234567.50" → "1,234,567.50" for plain-text copy (emails, notices). UI uses Intl. */
+export function formatAmount(amount: string): string {
+  const [whole = '0', frac = '00'] = amount.split('.');
+  return `${whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}.${frac}`;
+}

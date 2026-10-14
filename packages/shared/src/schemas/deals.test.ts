@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { multiplyMoney, orderTotals, percentOf } from '../money';
+import { formatAmount, multiplyMoney, orderTotals, percentOf } from '../money';
 import {
   canTransitionOrder,
   counterOfferSchema,
@@ -19,6 +19,8 @@ describe('money', () => {
     expect(multiplyMoney('0.10', 3)).toBe('0.30');
     expect(multiplyMoney('19.99', 7)).toBe('139.93');
     expect(multiplyMoney('999999999999.99', 1)).toBe('999999999999.99');
+    expect(formatAmount('1234567.50')).toBe('1,234,567.50');
+    expect(formatAmount('999.00')).toBe('999.00');
   });
 
   it('rounds percentages half-up to the cent', () => {

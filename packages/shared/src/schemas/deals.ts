@@ -45,6 +45,8 @@ export const declineOfferSchema = z.object({ message: offerNoteSchema.optional()
 export const offerQuerySchema = cursorQuerySchema.extend({
   role: z.enum(['sent', 'received', 'all']).default('all'),
   status: z.enum(OFFER_STATUSES).optional(),
+  /** The chat thread renders its offer cards from this. */
+  conversationId: z.string().uuid().optional(),
 });
 
 // ─── Orders ─────────────────────────────────────────────────────────────────
