@@ -1,13 +1,17 @@
 'use client';
 
-import type { ConversationDto } from '@markethub/shared';
+import type { ConversationDto, OfferDto } from '@markethub/shared';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Loader2, RotateCcw } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Fragment, useEffect, useLayoutEffect, useRef } from 'react';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import { PresenceDot } from '@/components/chat/conversation-list';
+import { CheckoutDialog } from '@/components/deals/checkout-dialog';
+import { DealEvent, OfferCard } from '@/components/deals/offer-card';
+import { OfferDialog } from '@/components/deals/offer-dialog';
 import { ProfileAvatar } from '@/components/profile-avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -17,6 +21,7 @@ import {
   useMessages,
   useSendMessage,
 } from '@/hooks/use-chat';
+import { useThreadOffers } from '@/hooks/use-deals';
 import { ApiError } from '@/lib/api';
 import { dayLabel, formatMoney, messageTime, sameDay } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -177,8 +182,12 @@ export function Thread({ id }: { id: string }) {
   const conversation = useConversation(id);
   const messages = useMessages(id);
   const send = useSendMessage(id);
+  const offers = useThreadOffers(id);
   const typing = useChatStore((s) => isTypingNow(s.typing[id]));
   const setOpen = useChatStore((s) => s.setOpen);
+  const [sheet, setSheet] = useState<
+    { kind: 'offer' } | { kind: 'counter' | 'checkout'; offer: OfferDto } | null
+  >(null);
 
   const scroller = useRef<HTMLDivElement>(null);
   const top = useRef<HTMLDivElement>(null);
@@ -197,6 +206,27 @@ export function Thread({ id }: { id: string }) {
     setOpen(id);
     return () => setOpen(null);
   }, [id, setOpen]);
+
+  // "Make offer" on a listing lands here with ?offer=1.
+  const router = useRouter();
+  const pathname = usePathname();
+  const wantsOffer = useSearchParams().get('offer') === '1';
+  const c = conversation.data;
+  const canOffer = !!c && c.listing.status === 'active' && c.listing.type !== 'job';
+  useEffect(() => {
+    if (!wantsOffer || !c) return;
+    if (canOffer) setSheet({ kind: 'offer' });
+    router.replace(pathname, { scroll: false });
+  }, [wantsOffer, c, canOffer, router, pathname]);
+
+  // An offer message whose offer we don't have yet (missed event) → refetch the set.
+  const offerMap = offers.data;
+  const missingOffer =
+    !!offerMap && list.some((m) => m.offerId && m.type === 'offer' && !offerMap[m.offerId]);
+  const { refetch: refetchOffers, isFetching: fetchingOffers } = offers;
+  useEffect(() => {
+    if (missingOffer && !fetchingOffers) void refetchOffers();
+  }, [missingOffer, fetchingOffers, refetchOffers]);
 
   // Read on open, on new arrivals, and when the tab comes back into view.
   const unread = conversation.data?.unread ?? 0;
@@ -314,7 +344,8 @@ export function Thread({ id }: { id: string }) {
               prev!.senderId === m.senderId &&
               Date.parse(m.createdAt) - Date.parse(prev!.createdAt) < GROUP_MS;
             const mine = m.senderId === me;
-            const lastMine = mine && !list.slice(i + 1).some((n) => n.senderId === me);
+            const chatty = m.type === 'text' || m.type === 'image' || m.type === 'file';
+            const lastMine = mine && chatty && !list.slice(i + 1).some((n) => n.senderId === me);
             return (
               <Fragment key={m.id}>
                 {newDay && (
@@ -322,14 +353,32 @@ export function Thread({ id }: { id: string }) {
                     {dayLabel(m.createdAt)}
                   </p>
                 )}
-                <Bubble
-                  m={m}
-                  mine={mine}
-                  tight={tight}
-                  onRetry={() =>
-                    void submit({ body: m.body ?? undefined, attachments: m.attachments }, m.id)
-                  }
-                />
+                {m.type === 'offer' ? (
+                  <OfferCard
+                    offer={m.offerId ? offerMap?.[m.offerId] : undefined}
+                    message={m}
+                    me={me}
+                    conversation={c}
+                    onCounter={(offer) => setSheet({ kind: 'counter', offer })}
+                    onCheckout={(offer) => setSheet({ kind: 'checkout', offer })}
+                  />
+                ) : m.type === 'offer_response' || m.type === 'system' ? (
+                  <DealEvent
+                    message={m}
+                    offer={m.offerId ? offerMap?.[m.offerId] : undefined}
+                    me={me}
+                    counterpartName={c?.counterpart.displayName ?? 'They'}
+                  />
+                ) : (
+                  <Bubble
+                    m={m}
+                    mine={mine}
+                    tight={tight}
+                    onRetry={() =>
+                      void submit({ body: m.body ?? undefined, attachments: m.attachments }, m.id)
+                    }
+                  />
+                )}
                 {lastMine && !m.status && (
                   <p className="mt-0.5 text-right text-[11px] text-muted-foreground">
                     {m.isRead ? 'Seen' : 'Sent'}
@@ -361,7 +410,25 @@ export function Thread({ id }: { id: string }) {
         conversationId={id}
         disabled={!conversation.data}
         onSend={(draft) => submit(draft)}
+        onMakeOffer={canOffer ? () => setSheet({ kind: 'offer' }) : undefined}
       />
+
+      {c && (
+        <OfferDialog
+          conversation={c}
+          counterTo={sheet?.kind === 'counter' ? sheet.offer : undefined}
+          open={sheet?.kind === 'offer' || sheet?.kind === 'counter'}
+          onOpenChange={(open) => !open && setSheet(null)}
+        />
+      )}
+      {c && sheet?.kind === 'checkout' && (
+        <CheckoutDialog
+          conversation={c}
+          offer={sheet.offer}
+          open
+          onOpenChange={(open) => !open && setSheet(null)}
+        />
+      )}
     </section>
   );
 }

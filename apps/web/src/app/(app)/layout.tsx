@@ -1,6 +1,7 @@
 import { RealtimeBridge } from '@/components/chat/realtime-bridge';
 import { AccountMenu } from '@/components/shell/account-menu';
 import { BottomNav } from '@/components/shell/bottom-nav';
+import { NotificationBell } from '@/components/shell/notification-bell';
 import { Sidebar } from '@/components/shell/sidebar';
 import { Wordmark } from '@/components/shell/wordmark';
 
@@ -18,7 +19,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-30 flex h-14 items-center justify-between border-b bg-background/90 px-4 backdrop-blur lg:hidden">
           <Wordmark />
-          <AccountMenu compact />
+          <div className="flex items-center gap-1">
+            <NotificationBell />
+            <AccountMenu compact />
+          </div>
         </header>
 
         {/* Bottom padding clears the fixed mobile nav. Content hugs left on desktop, capped for line length. */}

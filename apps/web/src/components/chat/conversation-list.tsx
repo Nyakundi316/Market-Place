@@ -28,7 +28,15 @@ export function PresenceDot({ online, className }: { online: boolean; className?
 function preview(c: ConversationDto, me: string | undefined) {
   const m = c.lastMessage;
   if (!m) return 'No messages yet — say hello';
-  const text = m.body ?? (m.type === 'image' ? 'Photo' : m.type === 'file' ? 'File' : 'Message');
+  const text =
+    m.type === 'offer'
+      ? 'Sent an offer'
+      : m.type === 'offer_response'
+        ? 'Replied to an offer'
+        : m.type === 'system'
+          ? (m.body ?? 'Update')
+          : (m.body ?? (m.type === 'image' ? 'Photo' : m.type === 'file' ? 'File' : 'Message'));
+  if (m.type === 'system') return text;
   return m.senderId === me ? `You: ${text}` : text;
 }
 

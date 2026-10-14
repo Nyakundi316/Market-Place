@@ -1,7 +1,7 @@
 'use client';
 
 import { type Attachment, MAX_ATTACHMENTS, MAX_MESSAGE_LENGTH } from '@markethub/shared';
-import { ImagePlus, Loader2, SendHorizontal, X } from 'lucide-react';
+import { Handshake, ImagePlus, Loader2, SendHorizontal, X } from 'lucide-react';
 import Image from 'next/image';
 import { useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
@@ -18,10 +18,13 @@ export function Composer({
   conversationId,
   disabled,
   onSend,
+  onMakeOffer,
 }: {
   conversationId: string;
   disabled?: boolean;
   onSend: (draft: { body?: string; attachments?: Attachment[] }) => Promise<void>;
+  /** Absent when the listing can't take offers (sold, job post). */
+  onMakeOffer?: () => void;
 }) {
   const [text, setText] = useState('');
   const [photos, setPhotos] = useState<Pending[]>([]);
@@ -155,6 +158,20 @@ export function Composer({
         >
           <ImagePlus className="size-5" />
         </Button>
+        {onMakeOffer && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label="Make an offer"
+            title="Make an offer"
+            disabled={disabled}
+            onClick={onMakeOffer}
+            className="-ml-1.5 shrink-0 rounded-full text-muted-foreground"
+          >
+            <Handshake className="size-5" />
+          </Button>
+        )}
         <textarea
           ref={area}
           rows={1}

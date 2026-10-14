@@ -7,6 +7,7 @@ import { UnreadCount } from '@/components/chat/unread-count';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { AccountMenu } from './account-menu';
+import { NotificationBell } from './notification-bell';
 import { isActive, NAV } from './nav-items';
 import { Wordmark } from './wordmark';
 
@@ -14,7 +15,10 @@ export function Sidebar() {
   const pathname = usePathname();
   return (
     <aside className="sticky top-0 hidden h-dvh w-60 shrink-0 flex-col border-r bg-card/60 px-3 py-5 lg:flex">
-      <Wordmark className="px-3" />
+      <div className="flex items-center justify-between pr-1">
+        <Wordmark className="px-3" />
+        <NotificationBell className="-my-1" />
+      </div>
 
       <Button asChild className="mx-1 mt-7 justify-start gap-2 shadow-lift">
         <Link href="/create">

@@ -2,7 +2,9 @@
 
 import type { ServerToClientEvents } from '@markethub/shared';
 import { useQueryClient } from '@tanstack/react-query';
+import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { toast } from 'sonner';
 import {
   applyPresence,
   applyReceipt,
@@ -11,6 +13,7 @@ import {
   markRead,
   upsertMessage,
 } from '@/hooks/use-chat';
+import { applyOffer, dealKeys, prependNotification } from '@/hooks/use-deals';
 import { disconnectSocket, getSocket } from '@/lib/socket';
 import { useAuth } from '@/stores/auth';
 import { useChatStore } from '@/stores/chat';
@@ -23,6 +26,7 @@ const visible = () => document.visibilityState === 'visible';
  */
 export function RealtimeBridge() {
   const qc = useQueryClient();
+  const router = useRouter();
   const userId = useAuth((s) => (s.status === 'authenticated' ? s.user?.id : undefined));
 
   useEffect(() => {
@@ -32,7 +36,10 @@ export function RealtimeBridge() {
 
     const onConnect = () => {
       chat.setConnected(true);
-      void qc.invalidateQueries({ queryKey: ['chat'] }); // anything could have happened meanwhile
+      // Anything could have happened meanwhile.
+      void qc.invalidateQueries({ queryKey: ['chat'] });
+      void qc.invalidateQueries({ queryKey: dealKeys.all });
+      void qc.invalidateQueries({ queryKey: dealKeys.notifications });
     };
     const onDisconnect = () => chat.setConnected(false);
     const on: Partial<ServerToClientEvents> = {
@@ -52,6 +59,17 @@ export function RealtimeBridge() {
       },
       'presence:update': ({ userId: who, status }) => applyPresence(qc, who, status === 'online'),
       'conversation:new': () => void qc.invalidateQueries({ queryKey: chatKeys.list }),
+      'offer:new': (offer) => applyOffer(qc, offer),
+      'offer:update': (offer) => applyOffer(qc, offer),
+      'notification:new': (n) => {
+        prependNotification(qc, n);
+        if (n.type.startsWith('order.')) void qc.invalidateQueries({ queryKey: dealKeys.all });
+        // Chat has its own badge and live thread; deal events deserve a nudge.
+        if (n.type === 'chat.message' || (n.link && window.location.pathname === n.link)) return;
+        toast(n.title, {
+          action: n.link ? { label: 'View', onClick: () => router.push(n.link!) } : undefined,
+        });
+      },
     };
 
     socket.on('connect', onConnect);
@@ -66,7 +84,7 @@ export function RealtimeBridge() {
       disconnectSocket();
       chat.setConnected(false);
     };
-  }, [qc, userId]);
+  }, [qc, router, userId]);
 
   return null;
 }
