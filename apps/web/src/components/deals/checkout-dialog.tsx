@@ -9,7 +9,7 @@ import {
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Loader2, ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
 import { FormAlert } from '@/components/auth/form-alert';
@@ -40,6 +40,7 @@ import { applyApiErrors } from '@/lib/form-errors';
 import { cn } from '@/lib/utils';
 
 type Values = z.input<typeof createOrderSchema>;
+const validate = zodResolver(createOrderSchema);
 
 const METHOD_LABEL: Record<DeliveryMethod, { label: string; hint: string }> = {
   pickup: { label: 'Pick up', hint: 'Collect from the seller' },
@@ -74,32 +75,36 @@ export function CheckoutDialog({
   const methods = methodsFor(conversation.listing.type);
 
   const form = useForm<Values>({
-    resolver: zodResolver(createOrderSchema),
+    // A half-typed address left behind after switching away from Delivery mustn't block submit.
+    resolver: (values, ctx, opts) =>
+      validate(
+        values.deliveryMethod === 'courier' ? values : { ...values, deliveryAddress: undefined },
+        ctx,
+        opts,
+      ),
     defaultValues: { offerId: offer.id, deliveryMethod: methods[0], notes: '' },
   });
   const method = form.watch('deliveryMethod');
 
-  // Courier needs an address; seed it from the profile so most people only add a street.
+  // Courier needs an address; seed it once from the profile so most people only add a street.
+  // (The inputs register on mount, so `deliveryAddress` already exists — empty — by now.)
+  const seeded = useRef(false);
   useEffect(() => {
-    if (method !== 'courier' || form.getValues('deliveryAddress')) return;
     const p = me.data?.profile;
-    form.setValue('deliveryAddress', {
-      recipient: p?.displayName ?? '',
-      line1: '',
-      city: p?.city ?? '',
-      country: p?.country ?? '',
-    });
+    if (method !== 'courier' || seeded.current || !p) return;
+    seeded.current = true;
+    const fill = { recipient: p.displayName, city: p.city ?? '', country: p.country ?? '' };
+    for (const [key, value] of Object.entries(fill)) {
+      const path = `deliveryAddress.${key as keyof typeof fill}` as const;
+      if (!form.getValues(path)) form.setValue(path, value);
+    }
   }, [method, me.data, form]);
 
   const submit = form.handleSubmit(async (v) => {
     setBanner(null);
     try {
       const order = await createOrder.mutateAsync(
-        createOrderSchema.parse({
-          ...v,
-          deliveryAddress: v.deliveryMethod === 'courier' ? v.deliveryAddress : undefined,
-          notes: v.notes || undefined,
-        }),
+        createOrderSchema.parse({ ...v, notes: v.notes || undefined }),
       );
       onOpenChange(false);
       router.push(`/orders/${order.id}`);
