@@ -47,16 +47,34 @@ Decisions:
 - E2E helpers shared in `e2e/fixtures.ts` (verifiedUser, postListing, png)
 - New conversations get `lastMessageAt = now()` so they sort before their first message; the trigger takes over after
 
-## In progress — Phase 4 (Offers & Orders)
-4.1 shared offer/order/notification contracts, order state machine, cents-based money helpers ✅
+## Shipped — Phase 4 (Offers & Orders) ✅
+- **4.1** shared offer/order/notification contracts; `ORDER_TRANSITIONS` + per-side `ORDER_ACTIONS`; cents-based money helpers (`orderTotals`, `formatAmount`)
+- **4.2** offers API: create/counter/accept/decline/withdraw + `GET /offers/mine`; row lock on the conversation per transition; offer/offer_response chat messages; `offer:new|update` events
+- **4.3** `offer:expire` delayed job (48h), idempotent
+- **4.4** orders API: from an accepted offer (idempotent per offer), `ORD-YYYY-NNNNNN` from a sequence, stock reserved under a listing lock, ship/deliver/confirm-delivery/cancel, `order:payment-timeout` (24h), all audited
+- **4.5** notifications: `notify()` = row + `notification:new` + `email:send` when offline; list/read/read-all
+- **4.6** web: OfferCard in the thread, OfferDialog (= CounterOfferModal), Make offer from composer and listing CTA, CheckoutDialog
+- **4.7** web: `/deals` (buying/selling orders + open offers), `/orders/[id]` (OrderTimeline, role-aware money, action dialogs)
+- **4.8** web: NotificationBell (sidebar + mobile header), toasts for deal events
+- **4.9** API e2e: notifications 6, offers 14, orders 14; Playwright `deals.spec.ts` (two browsers: offer → counter → accept → checkout → order → seller cancels, buyer page updates live)
+- Fix found on the way: BullMQ rejects custom jobIds containing `:` unless they have exactly three parts — `email:{id}` silently never queued. Job ids now use `-`; rule noted in `jobs.module.ts`
 
 Decisions:
-- Offers expire after 48h; a new offer or counter supersedes the pending one in that conversation
-- Stock is reserved when the order is created and released on cancel; listing goes `sold` at 0
+- Offers expire after 48h; one pending offer per conversation — a new one from the same side withdraws the old, from the other side it's a counter
+- Job listings don't take offers; non-negotiable listings only accept the listed price
+- Stock is reserved when the order is created and released on cancel; listing goes `sold` at 0 and back to `active` when a cancel restocks it; DB CHECK keeps stock ≥ 0
+- On a `request` ("Wanted") listing the poster is the buyer
 - Either side can cancel while `awaiting_payment`; unpaid orders auto-cancel after 24h
 - Platform fee comes out of the seller's side: buyer pays `total = subtotal`, seller nets `subtotal − fee` (§7 "transfer net")
-- `ORDER_TRANSITIONS` is the full §3 machine; user actions (`cancel/ship/deliver/confirm-delivery`) are a subset in `ORDER_ACTIONS`; pay/dispute edges arrive in Phase 5
-- Push: `push:send` is a no-op until FCM is configured; device tokens deferred to Phase 7
+- `completedDeals` is incremented for both parties on completion
+- Email for deal notifications only when the recipient has no live socket (same rule as chat)
+- Push (FCM) deferred to Phase 7 with device tokens — no `push:send` queue yet, since it would have nothing to send
+- `ship/deliver/confirm-delivery` are reachable only from `in_escrow`, i.e. after Phase 5 payments; until then the buyer's order page explains that checkout is being switched on
+
+Tests: shared 61 · api unit 17 · api e2e 182 · web unit 23 · Playwright 30 (deals 2 + chat 4 + listings 8 + auth 16) — all green, 0 lint warnings
+
+## Next — Phase 5 (Payments & Escrow)
+PaymentProvider interface + Stripe; Paystack; checkout + Elements; charge + hold; webhooks (needs `WebhookEvent` table); release + auto-release; refund/dispute; reconciliation. Extend `deals.spec.ts` through pay → ship → deliver → confirm once payment exists.
 
 ## Blockers / decisions
 - `@RateLimit('auth')` (10/min/IP) covers credential endpoints only; refresh/logout/provider list are on the global limit (CGNAT would otherwise sign users out)
