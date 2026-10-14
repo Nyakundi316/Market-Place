@@ -6,7 +6,9 @@ import type {
   SendMessageInput,
   TypingInput,
 } from '../schemas/chat';
+import type { NotificationDto } from '../schemas/notifications';
 import type { ListingStatus } from './catalog';
+import type { OfferDto } from './deals';
 
 export interface MessageDto {
   id: string;
@@ -83,4 +85,7 @@ export interface ServerToClientEvents {
   typing: (msg: TypingInput & { userId: string }) => void;
   'presence:update': (msg: { userId: string; status: PresenceStatus }) => void;
   'conversation:new': (conversation: ConversationDto) => void;
+  'offer:new': (offer: OfferDto) => void;
+  'offer:update': (offer: OfferDto) => void;
+  'notification:new': (notification: NotificationDto) => void;
 }

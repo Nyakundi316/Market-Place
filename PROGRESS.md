@@ -1,6 +1,6 @@
 # Progress
 
-_Last updated: 2026-10-13_
+_Last updated: 2026-10-14_
 
 ## Shipped — Phase 1 (Foundation) ✅
 - **1.0** `packages/config`: shared tsconfig (base/nest/next/lib), ESLint flat config, Prettier; LF via `.gitattributes`; pnpm pinned to 9.15
@@ -32,7 +32,7 @@ Tests: shared 25 · api unit 17 · api e2e 73 · web unit 2 files · Playwright 
 
 Tests: web unit 20 · api unit 17 · api e2e 123 · Playwright 24 (listings 8 + auth 16) against prod builds
 
-## In progress — Phase 3 (Chat)
+## Shipped — Phase 3 (Chat) ✅
 3.1 shared chat schemas/DTOs + typed socket events ✅ → 3.2 chat REST (find-or-create, list, messages cursor, send, read; authz 404 for non-members; verified + profile to chat; 20/10s fixed window shared with socket) ✅ → 3.3 Socket.IO gateway (JWT handshake, redis adapter, rooms, presence, typing, receipts; integration tests) ✅ → 3.4 BullMQ + notify:offline worker ✅ → 3.5 web chat UI (/chat, /chat/[id], /chat/new; realtime bridge, optimistic sends, receipts, typing, presence, photos, unread badges) ✅ → 3.6 gateway integration tests + chat E2E ✅
 
 Decisions:
@@ -46,6 +46,17 @@ Decisions:
 - Web connects Socket.IO straight to `NEXT_PUBLIC_API_URL` (inlined from `API_URL` at build; already in turbo's build env), since the /api rewrite can't upgrade WebSockets. Socket first with ack, REST fallback when disconnected
 - E2E helpers shared in `e2e/fixtures.ts` (verifiedUser, postListing, png)
 - New conversations get `lastMessageAt = now()` so they sort before their first message; the trigger takes over after
+
+## In progress — Phase 4 (Offers & Orders)
+4.1 shared offer/order/notification contracts, order state machine, cents-based money helpers ✅
+
+Decisions:
+- Offers expire after 48h; a new offer or counter supersedes the pending one in that conversation
+- Stock is reserved when the order is created and released on cancel; listing goes `sold` at 0
+- Either side can cancel while `awaiting_payment`; unpaid orders auto-cancel after 24h
+- Platform fee comes out of the seller's side: buyer pays `total = subtotal`, seller nets `subtotal − fee` (§7 "transfer net")
+- `ORDER_TRANSITIONS` is the full §3 machine; user actions (`cancel/ship/deliver/confirm-delivery`) are a subset in `ORDER_ACTIONS`; pay/dispute edges arrive in Phase 5
+- Push: `push:send` is a no-op until FCM is configured; device tokens deferred to Phase 7
 
 ## Blockers / decisions
 - `@RateLimit('auth')` (10/min/IP) covers credential endpoints only; refresh/logout/provider list are on the global limit (CGNAT would otherwise sign users out)
