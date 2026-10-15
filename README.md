@@ -31,7 +31,7 @@ CI (`.github/workflows/ci.yml`) runs all of the above against throwaway Postgres
 
 ## Environment
 
-Validated at boot by `packages/shared/src/env.ts`; the API refuses to start on a bad value. See `.env.example` for every key. In production the S3, Stripe, Paystack, Resend and FCM keys are required and `WEB_URL`/`API_URL` must be https.
+Validated at boot by `packages/shared/src/env.ts`; the API refuses to start on a bad value. See `.env.example` for every key. In production the S3, Stripe (incl. `STRIPE_PUBLISHABLE_KEY`), Paystack and Resend keys are required and `WEB_URL`/`API_URL` must be https.
 
 ## API
 
@@ -100,6 +100,21 @@ Offers expire after 48 h (`offer` queue, job `expire`).
 
 Order numbers are `ORD-YYYY-NNNNNN` from a Postgres sequence. The platform fee (`PLATFORM_FEE_PERCENT`) comes out of the seller's side; the buyer pays the agreed price. Unpaid orders are cancelled after 24 h (`order` queue, job `payment-timeout`). Every status change is written to `audit_logs`.
 
+### Payments & escrow
+| | |
+| --- | --- |
+| `POST /orders/:id/pay` | buyer; returns a payment session (Stripe client secret + publishable key, Paystack hosted URL, or sandbox). Idempotent per order; never marks it paid. Rate limit 5/min |
+| `POST /orders/:id/dispute` | buyer, from `shipped`/`delivered`, within `DISPUTE_WINDOW_DAYS` of delivery; `{ reason }` |
+| `POST /orders/:id/refund` | seller, from `in_escrow`: full refund, item back on sale |
+| `GET /me/payout-accounts` · `POST /me/payout-accounts/stripe` · `POST /me/payout-accounts/paystack` | Stripe Connect Express onboarding (returns `actionUrl`) or a Paystack recipient `{ bankCode, accountNumber, currency }` |
+| `GET /payments/banks?currency=` | NGN, GHS, KES, ZAR |
+| `GET /admin/disputes` · `POST /admin/disputes/:orderId/resolve` | admin; `{ outcome: release\|refund\|split, refundAmount?, note }` |
+| `POST /webhooks/stripe` · `/webhooks/paystack` | public, signature-checked over the raw body, not rate limited |
+
+Flow (§7): pay → gateway → **webhook** marks the order paid and opens an `EscrowHold` → ship → deliver → buyer confirms (or `ESCROW_AUTO_RELEASE_HOURS` pass) → net of the fee is transferred to the seller's payout account. Without a payout account the money waits in escrow and the seller is asked to add one. Disputes freeze the hold until an admin releases, refunds or splits it. Money rows are never deleted; refunds and reversals are new rows.
+
+Gateways: Paystack for NGN/GHS/KES/ZAR, Stripe for everything else. **Without keys (dev/test) both are served by a sandbox**: Stripe's test cards (`4242 4242 4242 4242` pays, `4000 0000 0000 0002` declines), signed events through the same webhook path, instant payouts. Production refuses to boot without real keys.
+
 ### Notifications
 | | |
 | --- | --- |
@@ -113,5 +128,8 @@ Order numbers are `ORD-YYYY-NNNNNN` from a Postgres sequence. The platform fee (
 | `email` · `send` | email for a notification when the recipient is offline |
 | `offer` · `expire` | settles a pending offer at its `expiresAt` |
 | `order` · `payment-timeout` | cancels an unpaid order after 24 h |
+| `payout` · `release` | transfers the seller's net once the order completes |
+| `payout` · `auto-release` | completes and releases `ESCROW_AUTO_RELEASE_HOURS` after delivery |
+| `reconcile` · `payments` | 03:00 UTC: compares recent charges with the gateway; recovers missed webhooks, alerts admins on mismatch |
 
 All jobs are idempotent, retry 5× with exponential backoff, then go to `dead-letter`.

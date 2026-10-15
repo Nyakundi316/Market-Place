@@ -1,6 +1,6 @@
 # Progress
 
-_Last updated: 2026-10-14_
+_Last updated: 2026-10-15_
 
 ## Shipped — Phase 1 (Foundation) ✅
 - **1.0** `packages/config`: shared tsconfig (base/nest/next/lib), ESLint flat config, Prettier; LF via `.gitattributes`; pnpm pinned to 9.15
@@ -73,8 +73,33 @@ Decisions:
 
 Tests: shared 61 · api unit 17 · api e2e 182 · web unit 23 · Playwright 30 (deals 2 + chat 4 + listings 8 + auth 16) — all green, 0 lint warnings
 
-## Next — Phase 5 (Payments & Escrow)
-PaymentProvider interface + Stripe; Paystack; checkout + Elements; charge + hold; webhooks (needs `WebhookEvent` table); release + auto-release; refund/dispute; reconciliation. Extend `deals.spec.ts` through pay → ship → deliver → confirm once payment exists.
+## Shipped — Phase 5 (Payments & Escrow) ✅
+- **5.1** `WebhookEvent`, `PayoutAccount` (+ amount CHECK); pay/dispute/refund actions; payment, dispute, payout contracts; `STRIPE_PUBLISHABLE_KEY`
+- **5.2** `PaymentProvider` (§7) with Stripe (PaymentIntents, Connect transfers + Express onboarding, `constructEvent`), Paystack (hosted checkout, transfers, recipients, HMAC-SHA512) and a sandbox for keyless dev/test
+- **5.3** `POST /orders/:id/pay` (order lock, idempotency key per attempt) and `/webhooks/*` (verify → dedupe → apply in one tx; amount mismatch audited; late payments refunded)
+- **5.4** escrow release on confirm, auto-release after delivery, fee rows, payout accounts, nudge + release when the seller's account becomes ready
+- **5.5** disputes within the window; admin release/refund/split; seller refund of paid orders (restocks)
+- **5.6** nightly reconciliation (recover missed webhooks, close abandoned charges, alert on mismatch)
+- **5.7** web: PaymentDialog (Elements / Paystack / sandbox), confirming-payment polling, dispute + refund dialogs, escrow notes, Settings → Payouts
+- **5.8** API e2e: payments 16 (pay, declines, replay, bad signatures, mismatch, late pay, release, auto-release, split dispute, window, refund, payouts, reconciliation); provider unit tests 6; Playwright deals spec now runs the full money path
+
+Decisions:
+- Gateway per currency: Paystack NGN/GHS/KES/ZAR, Stripe the rest; keyless gateways fall back to the sandbox (never in production — env requires keys)
+- Gateway calls run inside the DB transaction that records them (25s tx timeout): a failure leaves nothing half-done and the request/job can retry
+- No payout account → order completes, escrow stays `held`, seller notified; adding an account releases everything waiting
+- Split disputes charge the platform fee on what the seller keeps
+- A transfer that fails or is reversed puts the hold back to `held` and is audited for an admin
+- Payout retries and repeat refunds get numbered idempotency keys (`:payout:2`, `:refund:2`); rows are never deleted
+
+Tests: shared 62 · api unit 23 · api e2e 198 · web unit 23 · Playwright 30 — all green, 0 lint warnings. One full Playwright run had 2 failures in the photo-upload wait under load; they passed on the rerun.
+
+## Next — Phase 6 (Trust)
+Reviews + trigger UI; verification (email/phone/ID/business); reports + admin panel (incl. the dispute queue UI over `GET /admin/disputes`); moderation; ban/warn; audit viewer; seller analytics.
+
+## Before launch (payments)
+- Put real keys in `.env`: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_CONNECT_CLIENT_ID`, `PAYSTACK_SECRET_KEY`, `PAYSTACK_WEBHOOK_SECRET`
+- Register webhook endpoints: Stripe → `{API_URL}/webhooks/stripe` (payment_intent.succeeded, payment_intent.payment_failed, refund.updated, transfer.reversed, account.updated); Paystack → `{API_URL}/webhooks/paystack`
+- Enable Stripe Connect (Express) and Paystack transfers on the live accounts
 
 ## Blockers / decisions
 - `@RateLimit('auth')` (10/min/IP) covers credential endpoints only; refresh/logout/provider list are on the global limit (CGNAT would otherwise sign users out)
