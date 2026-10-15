@@ -41,7 +41,7 @@ export function siteJsonLd(): Json[] {
       '@type': 'Organization',
       name: 'MarketHub',
       url: SITE_URL,
-      logo: absolute('/icon.png'),
+      logo: absolute('/icons/512'),
     },
   ];
 }

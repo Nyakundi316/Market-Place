@@ -24,7 +24,17 @@ const nextConfig = {
     return [{ source: '/api/:path*', destination: `${API_ORIGIN}/:path*` }];
   },
   async headers() {
-    return [{ source: '/:path*', headers: securityHeaders }];
+    return [
+      { source: '/:path*', headers: securityHeaders },
+      // The worker must never be served stale, or a broken one could stick around.
+      {
+        source: '/sw.js',
+        headers: [
+          { key: 'Cache-Control', value: 'no-cache, no-store, must-revalidate' },
+          { key: 'Content-Type', value: 'application/javascript; charset=utf-8' },
+        ],
+      },
+    ];
   },
 };
 

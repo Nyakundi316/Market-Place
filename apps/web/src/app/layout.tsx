@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import { SITE_URL } from '@/lib/seo';
 import './globals.css';
+import { ServiceWorker } from '@/components/service-worker';
 import { Providers } from './providers';
 
 const sans = localFont({ src: './fonts/GeistVF.woff', variable: '--font-sans', weight: '100 900' });
@@ -17,6 +18,7 @@ const DESCRIPTION =
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   applicationName: 'MarketHub',
+  appleWebApp: { capable: true, title: 'MarketHub', statusBarStyle: 'default' },
   title: { default: 'MarketHub', template: '%s · MarketHub' },
   description: DESCRIPTION,
   openGraph: { siteName: 'MarketHub', type: 'website', locale: 'en', description: DESCRIPTION },
@@ -27,6 +29,10 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
+  themeColor: [
+    { media: '(prefers-color-scheme: light)', color: '#f6f3ee' },
+    { media: '(prefers-color-scheme: dark)', color: '#0e1714' },
+  ],
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
@@ -34,6 +40,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en">
       <body className={`${sans.variable} ${mono.variable} font-sans antialiased`}>
         <Providers>{children}</Providers>
+        <ServiceWorker />
       </body>
     </html>
   );
