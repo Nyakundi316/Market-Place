@@ -12,6 +12,7 @@ import { PresenceDot } from '@/components/chat/conversation-list';
 import { CheckoutDialog } from '@/components/deals/checkout-dialog';
 import { DealEvent, OfferCard } from '@/components/deals/offer-card';
 import { OfferDialog } from '@/components/deals/offer-dialog';
+import { ReportButton } from '@/components/trust/report-dialog';
 import { ProfileAvatar } from '@/components/profile-avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
@@ -66,6 +67,7 @@ function ThreadHeader({ c }: { c: ConversationDto }) {
             {typing ? 'typing…' : who.online ? 'Online' : c.role === 'buyer' ? 'Seller' : 'Buyer'}
           </p>
         </div>
+        <ReportButton entityType="user" entityId={who.userId} compact className="shrink-0 p-2" />
       </div>
 
       {/* The listing stays in view: every message is about this item. */}

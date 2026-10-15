@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { ListingGrid } from '@/components/listings/listing-grid';
+import { ReportButton } from '@/components/trust/report-dialog';
 import { ProfileAvatar } from '@/components/profile-avatar';
 import { ReviewStars } from '@/components/review-stars';
 import { Button } from '@/components/ui/button';
@@ -165,7 +166,10 @@ export function ProfileView({ initial }: { initial: PublicProfileDto }) {
               </Link>
             </Button>
           ) : (
-            <FollowButton profile={p} />
+            <div className="flex items-center gap-4">
+              <FollowButton profile={p} />
+              <ReportButton entityType="user" entityId={p.userId} />
+            </div>
           )}
         </div>
       </header>

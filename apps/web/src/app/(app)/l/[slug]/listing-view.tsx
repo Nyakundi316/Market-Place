@@ -5,6 +5,7 @@ import { ChevronRight, Eye, Handshake, MapPin, MessageCircle, ShieldCheck } from
 import Link from 'next/link';
 import { FavoriteButton } from '@/components/listings/listing-card';
 import { OwnerActions } from '@/components/listings/owner-actions';
+import { ReportButton } from '@/components/trust/report-dialog';
 import { ProfileAvatar } from '@/components/profile-avatar';
 import { ReviewStars } from '@/components/review-stars';
 import { Button } from '@/components/ui/button';
@@ -212,6 +213,7 @@ export function ListingView({ slug, initial }: { slug: string; initial: ListingD
               never send money outside the app.
             </p>
           )}
+          {!l.isOwner && <ReportButton entityType="listing" entityId={l.id} />}
         </aside>
       </div>
 

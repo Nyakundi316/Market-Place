@@ -29,6 +29,7 @@ import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
 import { PaymentDialog } from '@/components/deals/payment-dialog';
+import { ReviewForm } from '@/components/trust/review-form';
 import { useEscrowAction, useOrder, useOrderAction } from '@/hooks/use-deals';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { ApiError } from '@/lib/api';
@@ -499,6 +500,9 @@ export function OrderView({ id }: { id: string }) {
           )}
 
           <EscrowNote o={o} />
+          {o.side === 'buyer' && o.status === 'completed' && (
+            <ReviewForm orderId={o.id} sellerName={o.seller.displayName} existing={o.review} />
+          )}
 
           <section aria-labelledby="progress">
             <h2 id="progress" className="mb-3 text-sm font-semibold">

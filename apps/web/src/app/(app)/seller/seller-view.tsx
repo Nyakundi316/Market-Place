@@ -14,6 +14,7 @@ import { useRequireAuth } from '@/hooks/use-require-auth';
 import { api } from '@/lib/api';
 import { formatPrice, timeAgo } from '@/lib/format';
 import { cn } from '@/lib/utils';
+import { SellerStats } from './seller-stats';
 
 const TABS: { status: ListingStatus; label: string; empty: string }[] = [
   {
@@ -105,6 +106,8 @@ export function SellerView() {
           </Link>
         </Button>
       </div>
+
+      {ready && <SellerStats />}
 
       <div
         role="tablist"

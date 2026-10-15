@@ -24,7 +24,7 @@ async function resize(file: File, maxEdge: number, quality: number): Promise<Blo
   );
 }
 
-async function put(blob: Blob, purpose: 'listing' | 'avatar' | 'chat') {
+async function signAndPut(blob: Blob, purpose: 'listing' | 'avatar' | 'chat' | 'verification') {
   const contentType = blob.type as 'image/webp' | 'image/jpeg';
   const signed = await api<PresignedUploadDto>('/images/sign', {
     method: 'POST',
@@ -36,8 +36,11 @@ async function put(blob: Blob, purpose: 'listing' | 'avatar' | 'chat') {
     headers: { 'Content-Type': contentType },
   });
   if (!res.ok) throw new Error(`Upload failed (${res.status})`);
-  return signed.publicUrl!; // public purposes always get one
+  return signed;
 }
+
+const put = async (blob: Blob, purpose: 'listing' | 'avatar' | 'chat') =>
+  (await signAndPut(blob, purpose)).publicUrl!; // public purposes always get one
 
 export async function uploadListingPhoto(file: File) {
   const [full, thumb] = await Promise.all([
@@ -68,6 +71,14 @@ export async function uploadChatPhoto(file: File) {
     width,
     height,
   };
+}
+
+/**
+ * ID / business documents go to the private bucket: we keep only the key,
+ * there is no public URL. Sharp enough to read, not phone-camera huge.
+ */
+export async function uploadVerificationDocument(file: File) {
+  return (await signAndPut(await resize(file, 2000, 0.88), 'verification')).key;
 }
 
 export const ACCEPTED_IMAGES = 'image/jpeg,image/png,image/webp';
