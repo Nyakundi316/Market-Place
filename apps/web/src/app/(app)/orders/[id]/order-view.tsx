@@ -119,8 +119,11 @@ function OrderTimeline({ o }: { o: OrderDto }) {
   );
 }
 
+type StatusAction = Extract<OrderAction, 'cancel' | 'ship' | 'deliver' | 'confirm-delivery'>;
+const isStatusAction = (a: OrderAction): a is StatusAction => a in CONFIRM;
+
 const CONFIRM: Record<
-  OrderAction,
+  StatusAction,
   { button: string; title: string; body: string; done: string; field?: 'tracking' | 'reason' }
 > = {
   ship: {
@@ -157,7 +160,7 @@ function ActionDialog({
   onClose,
 }: {
   order: OrderDto;
-  action: OrderAction | null;
+  action: StatusAction | null;
   onClose: () => void;
 }) {
   const run = useOrderAction(order.id);
@@ -283,7 +286,7 @@ const METHOD: Record<string, string> = {
 export function OrderView({ id }: { id: string }) {
   const ready = useRequireAuth();
   const q = useOrder(id);
-  const [action, setAction] = useState<OrderAction | null>(null);
+  const [action, setAction] = useState<StatusAction | null>(null);
 
   if (q.isError) {
     return (
@@ -311,7 +314,7 @@ export function OrderView({ id }: { id: string }) {
 
   const o = q.data;
   const other = o.side === 'buyer' ? o.seller : o.buyer;
-  const primary = o.actions.find((a) => a !== 'cancel');
+  const primary = o.actions.filter(isStatusAction).find((a) => a !== 'cancel');
   const addr = o.deliveryAddress;
 
   return (

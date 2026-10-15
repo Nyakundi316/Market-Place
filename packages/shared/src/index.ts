@@ -8,6 +8,7 @@ export * from './schemas/deals';
 export * from './schemas/notifications';
 export * from './schemas/profile';
 export * from './schemas/pagination';
+export * from './schemas/payments';
 export * from './schemas/uploads';
 export * from './types/auth';
 export * from './types/catalog';

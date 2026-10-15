@@ -14,6 +14,12 @@ export const NOTIFICATION_TYPES = [
   'order.delivered',
   'order.completed',
   'order.cancelled',
+  'order.paid',
+  'order.disputed',
+  'order.refunded',
+  'dispute.resolved',
+  'payout.sent',
+  'payout.setup_needed',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

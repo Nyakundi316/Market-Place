@@ -139,11 +139,27 @@ export const ORDER_ACTIONS = {
   deliver: { by: ['seller'], from: ['shipped'], to: 'delivered' },
   // Buyer may skip the seller's "delivered" step if it arrived first.
   'confirm-delivery': { by: ['buyer'], from: ['shipped', 'delivered'], to: 'completed' },
+  // Starts checkout; only a verified gateway webhook actually moves the order (§7).
+  pay: { by: ['buyer'], from: ['awaiting_payment'], to: 'paid' },
+  // Within DISPUTE_WINDOW_DAYS of delivery; the server checks the clock.
+  dispute: { by: ['buyer'], from: ['shipped', 'delivered'], to: 'disputed' },
+  // Seller can't fulfil a paid order: the buyer gets everything back.
+  refund: { by: ['seller'], from: ['in_escrow'], to: 'refunded' },
 } as const satisfies Record<
   string,
   { by: readonly DealSide[]; from: readonly OrderStatus[]; to: OrderStatus }
 >;
 export type OrderAction = keyof typeof ORDER_ACTIONS;
+
+export const disputeOrderSchema = z
+  .object({
+    reason: z.string().trim().min(10, 'Tell us what went wrong (10+ characters)').max(1000),
+  })
+  .strict();
+
+export const refundOrderSchema = z
+  .object({ reason: z.string().trim().min(1).max(500).optional() })
+  .strict();
 
 export function canTransitionOrder(from: OrderStatus, to: OrderStatus): boolean {
   return ORDER_TRANSITIONS[from].includes(to);
@@ -168,3 +184,5 @@ export type CreateOrderInput = z.infer<typeof createOrderSchema>;
 export type ShipOrderInput = z.infer<typeof shipOrderSchema>;
 export type CancelOrderInput = z.infer<typeof cancelOrderSchema>;
 export type OrderQuery = z.infer<typeof orderQuerySchema>;
+export type DisputeOrderInput = z.infer<typeof disputeOrderSchema>;
+export type RefundOrderInput = z.infer<typeof refundOrderSchema>;

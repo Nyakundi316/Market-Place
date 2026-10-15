@@ -10,6 +10,7 @@ import {
   ORDER_TRANSITIONS,
   orderActionsFor,
 } from './deals';
+import { gatewayFor, resolveDisputeSchema } from './payments';
 
 const conversationId = '6f1c2f8e-1b7a-4c35-9a59-0d7b8f0a2c11';
 const offerId = '0b8f4f8e-2c7a-4d35-8a59-1d7b8f0a2c22';
@@ -73,9 +74,7 @@ describe('createOrderSchema', () => {
   const address = { recipient: 'Ama', line1: '12 Oxford St', city: 'Accra', country: 'gh' };
 
   it('needs an address for courier delivery only', () => {
-    expect(createOrderSchema.safeParse({ offerId, deliveryMethod: 'courier' }).success).toBe(
-      false,
-    );
+    expect(createOrderSchema.safeParse({ offerId, deliveryMethod: 'courier' }).success).toBe(false);
     expect(createOrderSchema.safeParse({ offerId, deliveryMethod: 'pickup' }).success).toBe(true);
     const parsed = createOrderSchema.parse({
       offerId,
@@ -110,10 +109,26 @@ describe('order state machine', () => {
   });
 
   it('gives each side its own buttons', () => {
-    expect(orderActionsFor('awaiting_payment', 'buyer')).toEqual(['cancel']);
-    expect(orderActionsFor('in_escrow', 'seller')).toEqual(['ship']);
+    expect(orderActionsFor('awaiting_payment', 'buyer')).toEqual(['cancel', 'pay']);
+    expect(orderActionsFor('awaiting_payment', 'seller')).toEqual(['cancel']);
+    expect(orderActionsFor('in_escrow', 'seller')).toEqual(['ship', 'refund']);
     expect(orderActionsFor('in_escrow', 'buyer')).toEqual([]);
-    expect(orderActionsFor('shipped', 'buyer')).toEqual(['confirm-delivery']);
+    expect(orderActionsFor('shipped', 'buyer')).toEqual(['confirm-delivery', 'dispute']);
     expect(orderActionsFor('delivered', 'seller')).toEqual([]);
+    expect(orderActionsFor('disputed', 'buyer')).toEqual([]);
+  });
+});
+
+describe('payments', () => {
+  it('routes local currencies to Paystack, the rest to Stripe', () => {
+    expect(gatewayFor('KES')).toBe('paystack');
+    expect(gatewayFor('NGN')).toBe('paystack');
+    expect(gatewayFor('USD')).toBe('stripe');
+    expect(gatewayFor('UGX')).toBe('stripe');
+    expect(resolveDisputeSchema.safeParse({ outcome: 'split', note: 'half' }).success).toBe(false);
+    expect(
+      resolveDisputeSchema.safeParse({ outcome: 'split', refundAmount: '50', note: 'half' })
+        .success,
+    ).toBe(true);
   });
 });

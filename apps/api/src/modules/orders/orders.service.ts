@@ -43,7 +43,10 @@ import {
 
 type Tx = Prisma.TransactionClient;
 
-const VERB: Record<OrderAction, string> = {
+/** The changes that are plain status moves; pay/dispute/refund move money (PaymentsService). */
+type StatusAction = Extract<OrderAction, 'cancel' | 'ship' | 'deliver' | 'confirm-delivery'>;
+
+const VERB: Record<StatusAction, string> = {
   cancel: 'cancel',
   ship: 'mark as shipped',
   deliver: 'mark as delivered',
@@ -242,7 +245,7 @@ export class OrdersService implements OnModuleInit {
   private async transition(
     user: RequestUser,
     id: string,
-    action: OrderAction,
+    action: StatusAction,
     data: Prisma.OrderUpdateInput,
     reason?: string,
   ): Promise<OrderDto> {
@@ -297,7 +300,7 @@ export class OrdersService implements OnModuleInit {
 
     const other = order.buyerId === user.id ? order.sellerId : order.buyerId;
     const what = `${order.orderNumber} (“${order.listing.title}”)`;
-    const copy: Record<OrderAction, [NotificationType, string]> = {
+    const copy: Record<StatusAction, [NotificationType, string]> = {
       cancel: ['order.cancelled', `Order ${what} was cancelled`],
       ship: ['order.shipped', `Order ${what} is on its way`],
       deliver: ['order.delivered', `Order ${what} was marked delivered — please confirm`],
