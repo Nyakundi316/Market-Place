@@ -1,7 +1,7 @@
 'use client';
 
 import { useQueryClient } from '@tanstack/react-query';
-import { Heart, LayoutList, LogOut, Settings, UserRound } from 'lucide-react';
+import { Heart, LayoutList, LogOut, Settings, ShieldCheck, UserRound } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { ProfileAvatar } from '@/components/profile-avatar';
@@ -96,6 +96,13 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
             <Settings /> Settings
           </Link>
         </DropdownMenuItem>
+        {me?.user.role === 'admin' && (
+          <DropdownMenuItem asChild>
+            <Link href="/admin">
+              <ShieldCheck /> Admin
+            </Link>
+          </DropdownMenuItem>
+        )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={signOut}>
           <LogOut /> Log out
