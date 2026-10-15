@@ -18,6 +18,7 @@ import {
   type DisputeOrderInput,
   disputeOrderSchema,
   type Env,
+  PAYOUT_CURRENCIES,
   type PaystackPayoutInput,
   paystackPayoutSchema,
   type RefundOrderInput,
@@ -41,7 +42,7 @@ const id = new ParseUUIDPipe();
 const sandboxPaySchema = z
   .object({ ref: z.string().min(8).max(100), card: z.string().max(30) })
   .strict();
-const banksQuerySchema = z.object({ currency: z.enum(['NGN', 'GHS', 'KES', 'ZAR']) });
+const banksQuerySchema = z.object({ currency: z.enum(PAYOUT_CURRENCIES) });
 
 /** Money-moving routes sit behind the §9 payment limit (5/min/user, fails closed). */
 @Controller()
@@ -103,13 +104,6 @@ export class PaymentsController {
     return this.escrow.payoutAccounts(user.id);
   }
 
-  @Post('me/payout-accounts/stripe')
-  @HttpCode(200)
-  @RateLimit('payment')
-  stripePayouts(@CurrentUser() user: RequestUser) {
-    return this.escrow.setupStripePayouts(user);
-  }
-
   @Post('me/payout-accounts/paystack')
   @HttpCode(200)
   @RateLimit('payment')
@@ -155,12 +149,6 @@ export class WebhooksController {
     private readonly payments: PaymentsService,
     @InjectEnv() private readonly env: Env,
   ) {}
-
-  @Post('stripe')
-  @HttpCode(200)
-  stripe(@Req() req: RawBodyRequest<Request>, @Headers('stripe-signature') sig?: string) {
-    return this.payments.ingest('stripe', req.rawBody, sig);
-  }
 
   @Post('paystack')
   @HttpCode(200)

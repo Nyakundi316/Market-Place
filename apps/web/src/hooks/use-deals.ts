@@ -273,12 +273,8 @@ export function useBanks(currency: string | null) {
 export function useSetupPayouts() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (
-      input: { gateway: 'stripe' } | ({ gateway: 'paystack' } & PaystackPayoutInput),
-    ) => {
-      const { gateway, ...body } = input;
-      return api<PayoutAccountDto>(`/me/payout-accounts/${gateway}`, { method: 'POST', body });
-    },
+    mutationFn: (input: PaystackPayoutInput) =>
+      api<PayoutAccountDto>('/me/payout-accounts/paystack', { method: 'POST', body: input }),
     onSuccess: () => void qc.invalidateQueries({ queryKey: payoutKeys.accounts }),
   });
 }

@@ -1,6 +1,6 @@
 import type { Currency } from '@markethub/shared';
 
-export type GatewayName = 'stripe' | 'paystack' | 'sandbox';
+export type GatewayName = 'paystack' | 'sandbox';
 
 export interface ChargeParams {
   orderId: string;
@@ -32,7 +32,7 @@ export interface TransferParams {
   currency: Currency;
   /** PayoutAccount.accountRef */
   destination: string;
-  /** The charge the money came from (Stripe source_transaction). */
+  /** The charge the money came from (kept for gateways that tie transfers to it). */
   sourceRef: string;
   idempotencyKey: string;
 }
@@ -72,8 +72,6 @@ export interface PayoutSetup {
   accountRef: string;
   status: 'pending' | 'ready';
   details: { label: string; currency?: string } | null;
-  /** Hosted onboarding (Stripe Connect KYC). */
-  actionUrl?: string;
 }
 
 /** §7 PaymentProvider, plus the lookups reconciliation and payouts need. */

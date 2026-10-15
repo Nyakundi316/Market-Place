@@ -125,7 +125,7 @@ describe('Payments & escrow (e2e)', () => {
         status: 'requires_action',
         amount: '43000.00',
         currency: 'KES',
-        publishableKey: null,
+        redirectUrl: null, // the sandbox uses its card form, not a hosted page
       });
       expect(await db.transaction.count({ where: { orderId, type: 'charge' } })).toBe(1);
       const order = await db.order.findUniqueOrThrow({ where: { id: orderId } });
@@ -229,8 +229,9 @@ describe('Payments & escrow (e2e)', () => {
       expect((await db.order.findUniqueOrThrow({ where: { id: orderId } })).status).toBe(
         'awaiting_payment',
       );
-      // Unconfigured real gateways aren't open endpoints.
-      await http().post('/webhooks/stripe').set('stripe-signature', 'x').send('{}').expect(404);
+      // Paystack has no keys in tests: its endpoint isn't open, and Stripe's is gone.
+      await http().post('/webhooks/paystack').set('x-paystack-signature', 'x').send('{}').expect(404);
+      await http().post('/webhooks/stripe').send('{}').expect(404);
     });
 
     it('a success for the wrong amount never pays the order', async () => {

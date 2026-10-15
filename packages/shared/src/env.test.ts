@@ -42,7 +42,7 @@ describe('parseEnv', () => {
     } catch (e) {
       message = String(e);
     }
-    expect(message).toMatch(/STRIPE_SECRET_KEY: required in production/);
+    expect(message).toMatch(/PAYSTACK_SECRET_KEY: required in production/);
     expect(message).toMatch(/RESEND_API_KEY/);
     expect(message).toMatch(/WEB_URL: must be https/);
   });

@@ -120,11 +120,10 @@ describe('order state machine', () => {
 });
 
 describe('payments', () => {
-  it('routes local currencies to Paystack, the rest to Stripe', () => {
+  it('routes every currency to Paystack', () => {
     expect(gatewayFor('KES')).toBe('paystack');
     expect(gatewayFor('NGN')).toBe('paystack');
-    expect(gatewayFor('USD')).toBe('stripe');
-    expect(gatewayFor('UGX')).toBe('stripe');
+    expect(gatewayFor('USD')).toBe('paystack');
     expect(resolveDisputeSchema.safeParse({ outcome: 'split', note: 'half' }).success).toBe(false);
     expect(
       resolveDisputeSchema.safeParse({ outcome: 'split', refundAmount: '50', note: 'half' })

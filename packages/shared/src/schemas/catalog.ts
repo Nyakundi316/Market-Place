@@ -6,8 +6,8 @@ export const LISTING_TYPES = ['product', 'service', 'job', 'request'] as const;
 export const CONDITIONS = ['new', 'like_new', 'good', 'fair', 'for_parts'] as const;
 export const CONTACT_PREFS = ['chat', 'phone', 'both'] as const;
 export const LISTING_SORTS = ['relevance', 'newest', 'price_asc', 'price_desc'] as const;
-// What Stripe and Paystack can both settle in our launch markets.
-export const CURRENCIES = ['KES', 'NGN', 'GHS', 'ZAR', 'UGX', 'TZS', 'USD', 'EUR', 'GBP'] as const;
+// What Paystack, our only gateway, can charge in (Kenya, Nigeria, Ghana, South Africa + USD).
+export const CURRENCIES = ['KES', 'NGN', 'GHS', 'ZAR', 'USD'] as const;
 
 export const MAX_LISTING_IMAGES = 10;
 export const MAX_LISTING_TAGS = 10;

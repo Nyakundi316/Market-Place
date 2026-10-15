@@ -121,7 +121,7 @@ describe('db triggers & constraints', () => {
           type: 'charge',
           amount: '-1',
           currency: 'KES',
-          gateway: 'stripe',
+          gateway: 'paystack',
           idempotencyKey: `neg-${tag}`,
         },
       }),

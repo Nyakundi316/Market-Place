@@ -49,11 +49,6 @@ const base = z.object({
   // Documented extra: verification documents live here, never publicly readable.
   S3_PRIVATE_BUCKET: optional,
 
-  STRIPE_SECRET_KEY: optional,
-  STRIPE_WEBHOOK_SECRET: optional,
-  STRIPE_CONNECT_CLIENT_ID: optional,
-  // Documented extra: Elements needs the publishable key; served with each payment session.
-  STRIPE_PUBLISHABLE_KEY: optional,
   PAYSTACK_SECRET_KEY: optional,
   PAYSTACK_WEBHOOK_SECRET: optional,
 
@@ -84,9 +79,6 @@ const REQUIRED_IN_PROD = [
   'S3_ACCESS_KEY',
   'S3_SECRET_KEY',
   'S3_PRIVATE_BUCKET',
-  'STRIPE_SECRET_KEY',
-  'STRIPE_WEBHOOK_SECRET',
-  'STRIPE_PUBLISHABLE_KEY',
   'PAYSTACK_SECRET_KEY',
   'PAYSTACK_WEBHOOK_SECRET',
   'RESEND_API_KEY',

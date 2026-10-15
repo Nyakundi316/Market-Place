@@ -1,7 +1,7 @@
 # Fly.io — MarketHub API. Deploy from the repo root:
 #   fly deploy --config infra/fly/api.toml
 # Secrets (fly secrets set …): DATABASE_URL, REDIS_URL, JWT_*, INTERNAL_API_KEY,
-# S3_*, STRIPE_*, PAYSTACK_*, RESEND_API_KEY, SENTRY_DSN, OTEL_* — see docs/RUNBOOK.md.
+# S3_*, PAYSTACK_*, RESEND_API_KEY, SENTRY_DSN, OTEL_* — see docs/RUNBOOK.md.
 app = "markethub-api"
 primary_region = "jnb" # Johannesburg: closest Fly region to the launch markets
 

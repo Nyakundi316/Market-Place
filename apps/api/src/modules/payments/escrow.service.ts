@@ -589,39 +589,10 @@ export class EscrowService implements OnModuleInit {
       orderBy: { createdAt: 'asc' },
     });
     return rows.map((r) => ({
-      gateway: (r.gateway === 'sandbox' ? 'stripe' : r.gateway) as PayoutAccountDto['gateway'],
+      gateway: 'paystack' as const, // sandbox accounts stand in for Paystack ones
       status: r.status,
       details: (r.details as PayoutAccountDto['details']) ?? null,
-      actionUrl: null,
     }));
-  }
-
-  async setupStripePayouts(user: RequestUser): Promise<PayoutAccountDto> {
-    const profile = await this.db.profile.findUnique({ where: { userId: user.id } });
-    const me = await this.db.user.findUniqueOrThrow({
-      where: { id: user.id },
-      select: { email: true },
-    });
-    const stripe = this.gateways.stripe;
-    const existing = await this.db.payoutAccount.findUnique({
-      where: { userId_gateway: { userId: user.id, gateway: stripe ? 'stripe' : 'sandbox' } },
-    });
-    const setup: PayoutSetup = stripe
-      ? await stripe.setupPayouts({
-          userId: user.id,
-          email: me.email,
-          country: profile?.country ?? null,
-          existingRef: existing?.accountRef,
-          returnUrl: `${this.env.WEB_URL}/settings?payouts=stripe#payouts`,
-        })
-      : existing && existing.status === 'ready'
-        ? {
-            accountRef: existing.accountRef,
-            status: 'ready',
-            details: existing.details as PayoutSetup['details'],
-          }
-        : await this.gateways.sandbox.setupPayouts({});
-    return this.savePayoutAccount(user.id, stripe ? 'stripe' : 'sandbox', setup, 'stripe');
   }
 
   async setupPaystackPayouts(
@@ -634,7 +605,7 @@ export class EscrowService implements OnModuleInit {
     const setup = paystack
       ? await paystack.setupPayouts({ ...input, name: profile.displayName })
       : await this.gateways.sandbox.setupPayouts(input);
-    return this.savePayoutAccount(user.id, paystack ? 'paystack' : 'sandbox', setup, 'paystack');
+    return this.savePayoutAccount(user.id, paystack ? 'paystack' : 'sandbox', setup);
   }
 
   banks(currency: string) {
@@ -645,7 +616,6 @@ export class EscrowService implements OnModuleInit {
     userId: string,
     gateway: GatewayName,
     setup: PayoutSetup,
-    shownAs: PayoutAccountDto['gateway'],
   ): Promise<PayoutAccountDto> {
     const data = {
       accountRef: setup.accountRef,
@@ -665,12 +635,7 @@ export class EscrowService implements OnModuleInit {
       metadata: { gateway, status: setup.status },
     });
     if (setup.status === 'ready') await this.releaseWaiting(userId, gateway);
-    return {
-      gateway: shownAs,
-      status: setup.status,
-      details: setup.details,
-      actionUrl: setup.actionUrl ?? null,
-    };
+    return { gateway: 'paystack', status: setup.status, details: setup.details };
   }
 
   // ─── Helpers ────────────────────────────────────────────────────────────

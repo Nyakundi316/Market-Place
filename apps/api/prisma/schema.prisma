@@ -526,7 +526,7 @@ model Transaction {
   status         TxnStatus @default(pending)
   amount         Decimal   @db.Decimal(14, 2)
   currency       String    @db.Char(3)
-  gateway        String // "stripe" | "paystack"
+  gateway        String // "paystack" (or "sandbox" outside production)
   gatewayRef     String?   @map("gateway_ref")
   gatewayPayload Json?     @map("gateway_payload") // never exposed (§9)
   idempotencyKey String    @unique @map("idempotency_key")
@@ -626,7 +626,7 @@ model Report {
 /// NOTHING before anything is applied, so a replayed event is a no-op.
 model WebhookEvent {
   id          String    @id @default(uuid()) @db.Uuid
-  gateway     String // "stripe" | "paystack" | "sandbox"
+  gateway     String // "paystack" | "sandbox"
   eventId     String    @map("event_id")
   type        String
   payload     Json
@@ -644,8 +644,8 @@ enum PayoutAccountStatus {
   restricted // gateway disabled payouts
 }
 
-/// Where a seller's escrow releases go: a Stripe Connect account (acct_…) or
-/// a Paystack transfer recipient (RCP_…). One per gateway per user.
+/// Where a seller's escrow releases go: a Paystack transfer recipient (RCP_…),
+/// i.e. a bank account or mobile-money wallet (M-Pesa). One per gateway per user.
 model PayoutAccount {
   id         String              @id @default(uuid()) @db.Uuid
   userId     String              @map("user_id") @db.Uuid

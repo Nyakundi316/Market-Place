@@ -1,19 +1,15 @@
 import { createHmac } from 'node:crypto';
-import Stripe from 'stripe';
 import { fromMinor, toMinor } from './minor-units';
 import { WebhookSignatureError } from './payment-provider';
 import { PaystackProvider } from './paystack.provider';
-import { StripeProvider } from './stripe.provider';
 
 describe('minor units', () => {
-  it('converts without floats, honouring zero-decimal currencies', () => {
-    expect(toMinor('1500.00', 'KES')).toBe(150000);
-    expect(toMinor('0.10', 'USD')).toBe(10);
-    expect(toMinor('19.99', 'eur')).toBe(1999);
-    expect(toMinor('50000.00', 'UGX')).toBe(50000);
-    expect(() => toMinor('50000.50', 'UGX')).toThrow(/fractional/);
-    expect(fromMinor(150000, 'kes')).toBe('1500.00');
-    expect(fromMinor(50000, 'ugx')).toBe('50000.00');
+  it('converts to subunits without floats', () => {
+    expect(toMinor('1500.00')).toBe(150000);
+    expect(toMinor('0.10')).toBe(10);
+    expect(toMinor('19.99')).toBe(1999);
+    expect(fromMinor(150000)).toBe('1500.00');
+    expect(fromMinor(5)).toBe('0.05');
   });
 });
 
@@ -46,50 +42,47 @@ describe('PaystackProvider.verifyWebhook', () => {
   });
 });
 
-describe('StripeProvider.verifyWebhook', () => {
-  const secret = 'whsec_stripe_test';
-  const provider = new StripeProvider('sk_test_x', secret);
-  const stripe = new Stripe('sk_test_x');
-  const event = (type: string, object: Record<string, unknown>) =>
-    JSON.stringify({ id: 'evt_1', object: 'event', type, data: { object } });
-
-  it('normalises a payment_intent.succeeded', () => {
-    const payload = event('payment_intent.succeeded', {
-      id: 'pi_1',
-      amount: 4300000,
-      currency: 'usd',
-    });
-    const header = stripe.webhooks.generateTestHeaderString({ payload, secret });
-    expect(provider.verifyWebhook(Buffer.from(payload), header)).toEqual({
-      id: 'evt_1',
-      kind: 'charge.succeeded',
-      ref: 'pi_1',
-      amount: '43000.00',
-      currency: 'USD',
-    });
+describe('PaystackProvider.setupPayouts', () => {
+  const realFetch = global.fetch;
+  afterEach(() => {
+    global.fetch = realFetch;
   });
 
-  it('rejects a signature made with another secret', () => {
-    const payload = event('payment_intent.succeeded', { id: 'pi_1', amount: 1, currency: 'usd' });
-    const header = stripe.webhooks.generateTestHeaderString({ payload, secret: 'whsec_other' });
-    expect(() => provider.verifyWebhook(Buffer.from(payload), header)).toThrow(
-      WebhookSignatureError,
-    );
-  });
+  it('uses the recipient type Paystack reports for the bank (M-Pesa → mobile_money)', async () => {
+    const calls: { url: string; body?: Record<string, unknown> }[] = [];
+    global.fetch = jest.fn(async (url: string | URL | Request, init?: RequestInit) => {
+      const body = init?.body
+        ? (JSON.parse(String(init.body)) as Record<string, unknown>)
+        : undefined;
+      calls.push({ url: String(url), body });
+      const data = String(url).includes('/bank?')
+        ? [
+            { code: 'MPESA', name: 'M-PESA', active: true, type: 'mobile_money' },
+            { code: '01', name: 'KCB Bank', active: true, type: 'kepss' },
+          ]
+        : {
+            recipient_code: 'RCP_1',
+            details: { bank_name: 'M-PESA', account_number: '0712345678' },
+          };
+      return new Response(JSON.stringify({ status: true, message: 'ok', data }), { status: 200 });
+    }) as typeof fetch;
 
-  it('marks Connect accounts ready only once payouts are enabled', () => {
-    const payload = event('account.updated', {
-      id: 'acct_1',
-      payouts_enabled: true,
-      details_submitted: true,
-      requirements: { disabled_reason: null },
+    const setup = await new PaystackProvider('sk_test_x', 'whsec').setupPayouts({
+      name: 'Juma',
+      bankCode: 'MPESA',
+      accountNumber: '0712345678',
+      currency: 'KES',
     });
-    const header = stripe.webhooks.generateTestHeaderString({ payload, secret });
-    expect(provider.verifyWebhook(Buffer.from(payload), header)).toMatchObject({
-      kind: 'payout_account.updated',
-      accountRef: 'acct_1',
-      ready: true,
-      restricted: false,
+    const create = calls.find((c) => c.url.endsWith('/transferrecipient'));
+    expect(create?.body).toMatchObject({
+      type: 'mobile_money',
+      bank_code: 'MPESA',
+      currency: 'KES',
+    });
+    expect(setup).toMatchObject({
+      accountRef: 'RCP_1',
+      status: 'ready',
+      details: { label: 'M-PESA ····5678' },
     });
   });
 });

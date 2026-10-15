@@ -76,7 +76,7 @@ export class PaystackProvider implements PaymentProvider {
       '/transaction/initialize',
       {
         email: p.email,
-        amount: toMinor(p.amount, p.currency),
+        amount: toMinor(p.amount),
         currency: p.currency,
         reference,
         callback_url: p.returnUrl,
@@ -97,7 +97,7 @@ export class PaystackProvider implements PaymentProvider {
   ): Promise<RefundResult> {
     const data = await this.call<{ id: number; status: string }>('POST', '/refund', {
       transaction: ref,
-      amount: toMinor(amount, currency),
+      amount: toMinor(amount),
       merchant_note: idempotencyKey,
     });
     return {
@@ -110,7 +110,7 @@ export class PaystackProvider implements PaymentProvider {
   async transfer(p: TransferParams): Promise<TransferResult> {
     const data = await this.call<{ transfer_code: string; status: string }>('POST', '/transfer', {
       source: 'balance',
-      amount: toMinor(p.amount, p.currency),
+      amount: toMinor(p.amount),
       currency: p.currency,
       recipient: p.destination,
       // Paystack dedupes on reference, which makes the payout idempotent.
@@ -152,7 +152,7 @@ export class PaystackProvider implements PaymentProvider {
           id,
           kind: 'charge.succeeded',
           ref: d.reference!,
-          amount: fromMinor(d.amount ?? 0, d.currency ?? 'NGN'),
+          amount: fromMinor(d.amount ?? 0),
           currency: (d.currency ?? '').toUpperCase(),
         };
       case 'refund.processed':
@@ -188,7 +188,7 @@ export class PaystackProvider implements PaymentProvider {
           : d.status === 'failed' || d.status === 'abandoned'
             ? 'failed'
             : 'pending',
-      amount: fromMinor(d.amount, d.currency),
+      amount: fromMinor(d.amount),
       currency: d.currency.toUpperCase(),
     };
   }
@@ -196,11 +196,11 @@ export class PaystackProvider implements PaymentProvider {
   // ─── Payout recipients ────────────────────────────────────────────────
 
   async banks(currency: string): Promise<BankDto[]> {
-    const list = await this.call<{ code: string; name: string; active: boolean }[]>(
+    const list = await this.call<{ code: string; name: string; active: boolean; type: string }[]>(
       'GET',
       `/bank?currency=${encodeURIComponent(currency)}&perPage=100`,
     );
-    return list.filter((b) => b.active).map((b) => ({ code: b.code, name: b.name }));
+    return list.filter((b) => b.active).map((b) => ({ code: b.code, name: b.name, type: b.type }));
   }
 
   async setupPayouts(opts: {
@@ -209,11 +209,14 @@ export class PaystackProvider implements PaymentProvider {
     accountNumber: string;
     currency: string;
   }): Promise<PayoutSetup> {
+    // Mobile money (M-Pesa) and banks need different recipient types; Paystack's
+    // bank list says which, so ask it rather than guess from the currency.
+    const bank = (await this.banks(opts.currency)).find((b) => b.code === opts.bankCode);
     const r = await this.call<{
       recipient_code: string;
       details: { bank_name: string; account_number: string };
     }>('POST', '/transferrecipient', {
-      type: RECIPIENT_TYPE[opts.currency] ?? 'nuban',
+      type: bank?.type ?? RECIPIENT_TYPE[opts.currency] ?? 'nuban',
       name: opts.name,
       account_number: opts.accountNumber,
       bank_code: opts.bankCode,

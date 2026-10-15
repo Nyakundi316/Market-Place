@@ -1,9 +1,8 @@
 'use client';
 
-import { PAYSTACK_CURRENCIES, type PayoutAccountDto } from '@markethub/shared';
-import { Banknote, CircleCheck, ExternalLink, Loader2 } from 'lucide-react';
-import { useSearchParams } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { PAYOUT_CURRENCIES, type PayoutAccountDto } from '@markethub/shared';
+import { Banknote, CircleCheck, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 import { toast } from 'sonner';
 import { FormAlert } from '@/components/auth/form-alert';
 import { Button } from '@/components/ui/button';
@@ -14,7 +13,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useBanks, usePayoutAccounts, useSetupPayouts } from '@/hooks/use-deals';
 import { ApiError } from '@/lib/api';
 
-type LocalCurrency = 'NGN' | 'GHS' | 'KES' | 'ZAR';
+type LocalCurrency = (typeof PAYOUT_CURRENCIES)[number];
 
 const STATUS_COPY: Record<PayoutAccountDto['status'], string> = {
   ready: 'Ready for payouts',
@@ -36,7 +35,7 @@ function BankForm({ onDone }: { onDone: () => void }) {
       onSubmit={(e) => {
         e.preventDefault();
         setup.mutate(
-          { gateway: 'paystack', currency, bankCode, accountNumber: accountNumber.trim() },
+          { currency, bankCode, accountNumber: accountNumber.trim() },
           {
             onSuccess: () => {
               toast.success('Payout account saved');
@@ -62,7 +61,7 @@ function BankForm({ onDone }: { onDone: () => void }) {
               setBankCode('');
             }}
           >
-            {PAYSTACK_CURRENCIES.map((c) => (
+            {PAYOUT_CURRENCIES.map((c) => (
               <option key={c}>{c}</option>
             ))}
           </NativeSelect>
@@ -87,7 +86,7 @@ function BankForm({ onDone }: { onDone: () => void }) {
         </div>
       </div>
       <div className="grid gap-1.5">
-        <Label htmlFor="payout-number">Account or phone number</Label>
+        <Label htmlFor="payout-number">Account number, or phone number for M-Pesa</Label>
         <Input
           id="payout-number"
           value={accountNumber}
@@ -111,27 +110,7 @@ function BankForm({ onDone }: { onDone: () => void }) {
 /** Where escrow releases go (§7). Linked from the "add payout details" nudge. */
 export function PayoutsSection() {
   const accounts = usePayoutAccounts();
-  const setup = useSetupPayouts();
   const [adding, setAdding] = useState(false);
-  const back = useSearchParams().get('payouts');
-
-  // Returning from Stripe onboarding: the webhook may lag a moment.
-  const { refetch } = accounts;
-  useEffect(() => {
-    if (back) void refetch();
-  }, [back, refetch]);
-
-  const connectStripe = () =>
-    setup.mutate(
-      { gateway: 'stripe' },
-      {
-        onSuccess: (a) => {
-          if (a.actionUrl) window.location.assign(a.actionUrl);
-          else toast.success('Payouts ready');
-        },
-        onError: (err) => toast.error(err instanceof ApiError ? err.message : 'Try again'),
-      },
-    );
 
   return (
     <section id="payouts" className="scroll-mt-20 space-y-4">
@@ -140,9 +119,8 @@ export function PayoutsSection() {
           Payouts
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          Where your money goes when a buyer confirms delivery. Local currencies (
-          {PAYSTACK_CURRENCIES.join(', ')}) pay out to a bank or mobile wallet; everything else
-          through Stripe.
+          Where your money goes when a buyer confirms delivery: a bank account or M-Pesa / mobile
+          money wallet, paid out through Paystack.
         </p>
       </div>
 
@@ -157,21 +135,9 @@ export function PayoutsSection() {
               <Banknote className="size-5 shrink-0 text-saffron-foreground" aria-hidden />
             )}
             <span className="min-w-0 flex-1 text-sm">
-              <span className="block font-medium">
-                {a.details?.label ?? (a.gateway === 'stripe' ? 'Stripe account' : 'Bank account')}
-              </span>
+              <span className="block font-medium">{a.details?.label ?? 'Payout account'}</span>
               <span className="text-xs text-muted-foreground">{STATUS_COPY[a.status]}</span>
             </span>
-            {a.gateway === 'stripe' && a.status !== 'ready' && (
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={connectStripe}
-                disabled={setup.isPending}
-              >
-                Finish
-              </Button>
-            )}
           </div>
         ))
       )}
@@ -181,18 +147,8 @@ export function PayoutsSection() {
       ) : (
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={() => setAdding(true)}>
-            Add bank or mobile money
+            {accounts.data?.length ? 'Change payout account' : 'Add bank or M-Pesa'}
           </Button>
-          {!accounts.data?.some((a) => a.gateway === 'stripe') && (
-            <Button variant="ghost" onClick={connectStripe} disabled={setup.isPending}>
-              {setup.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <ExternalLink className="size-4" />
-              )}
-              Connect with Stripe
-            </Button>
-          )}
         </div>
       )}
     </section>

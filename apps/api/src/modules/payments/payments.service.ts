@@ -148,7 +148,6 @@ export class PaymentsService {
       amount: order.total.toFixed(2),
       currency: order.currency as Currency,
       clientSecret: status === 'succeeded' ? null : (s?.clientSecret ?? null),
-      publishableKey: gateway === 'stripe' ? this.gateways.stripePublishableKey : null,
       redirectUrl: status === 'succeeded' ? null : (s?.redirectUrl ?? null),
     };
   }

@@ -14,14 +14,14 @@ import {
   WebhookSignatureError,
 } from './payment-provider';
 
-/** Stripe's public test numbers, so the habit carries over to the real thing. */
+/** The widely used test card numbers: one succeeds, one declines. */
 export const SANDBOX_CARDS = { ok: '4242424242424242', declined: '4000000000000002' } as const;
 
 const key = (ref: string) => `sandbox:charge:${ref}`;
 const CHARGE_TTL_S = 30 * 86_400;
 
 /**
- * Stands in for Stripe and Paystack outside production while their keys are
+ * Stands in for Paystack outside production while its keys are
  * placeholders. It keeps charge state in Redis and emits *signed* webhook
  * bodies, so payments travel the same verify → dedupe → apply path as real
  * gateway events. The env schema makes real keys mandatory in production.
