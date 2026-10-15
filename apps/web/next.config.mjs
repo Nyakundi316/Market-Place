@@ -1,3 +1,6 @@
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 // Server-side only: where the Next server reaches Nest. Browsers only ever see /api/*.
 const API_ORIGIN = process.env.API_INTERNAL_URL ?? process.env.API_URL ?? 'http://localhost:3001';
 const isProd = process.env.NODE_ENV === 'production';
@@ -19,8 +22,16 @@ const nextConfig = {
   // browser needs the API's public origin. Inlined at build time from API_URL.
   env: { NEXT_PUBLIC_API_URL: process.env.API_URL ?? 'http://localhost:3001' },
   poweredByHeader: false,
+  // Self-contained server bundle, for the Docker image only (infra/Dockerfile.web sets
+  // NEXT_OUTPUT). Off elsewhere: tracing uses symlinks, which Windows refuses without
+  // Developer Mode, and local `next start` doesn't need it.
+  output: process.env.NEXT_OUTPUT === 'standalone' ? 'standalone' : undefined,
   // Next 14: enables src/instrumentation.ts (server-side Sentry).
-  experimental: { instrumentationHook: true },
+  experimental: {
+    instrumentationHook: true,
+    // Monorepo: trace dependencies from the repo root so workspace packages are included.
+    outputFileTracingRoot: join(dirname(fileURLToPath(import.meta.url)), '../..'),
+  },
   // Same-origin proxy so auth cookies stay first-party (see PROJECT_BRIEF §3 addendum).
   async rewrites() {
     return [{ source: '/api/:path*', destination: `${API_ORIGIN}/:path*` }];

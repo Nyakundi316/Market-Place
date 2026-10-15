@@ -1,0 +1,33 @@
+# Fly.io — MarketHub web. Deploy from the repo root:
+#   fly deploy --config infra/fly/web.toml \
+#     --build-arg API_URL=https://api.markethub.example --build-arg WEB_URL=https://markethub.example
+# Secrets: INTERNAL_API_KEY (same as the API's), SENTRY_DSN.
+app = "markethub-web"
+primary_region = "jnb"
+
+[build]
+  dockerfile = "../Dockerfile.web"
+
+[env]
+  NODE_ENV = "production"
+  WEB_URL = "https://markethub.example"
+  # Server-side calls go over Fly's private network, not the public internet.
+  API_INTERNAL_URL = "http://markethub-api.internal:3001"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/offline" # static, no API dependency
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "20s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

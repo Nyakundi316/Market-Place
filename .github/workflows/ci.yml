@@ -120,3 +120,30 @@ jobs:
             apps/web/playwright-report
             apps/web/test-results
           retention-days: 7
+
+  images:
+    name: Docker images
+    runs-on: ubuntu-latest
+    # Proves both Dockerfiles still build; nothing is pushed from here.
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - name: Build API image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/Dockerfile.api
+          push: false
+          cache-from: type=gha,scope=api
+          cache-to: type=gha,mode=max,scope=api
+      - name: Build web image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/Dockerfile.web
+          push: false
+          build-args: |
+            API_URL=https://api.markethub.example
+            WEB_URL=https://markethub.example
+          cache-from: type=gha,scope=web
+          cache-to: type=gha,mode=max,scope=web

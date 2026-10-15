@@ -18,7 +18,9 @@ export function getSocket(): ChatSocket {
   if (socket) return socket;
   socket = io(process.env.NEXT_PUBLIC_API_URL!, {
     autoConnect: false,
-    transports: ['websocket', 'polling'],
+    // WebSocket only: long-polling across several API machines would need sticky
+    // sessions. If a network blocks websockets, sends fall back to REST.
+    transports: ['websocket'],
     auth: (cb) => cb({ token: useAuth.getState().accessToken }),
   });
 

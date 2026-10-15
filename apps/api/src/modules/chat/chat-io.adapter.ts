@@ -25,7 +25,7 @@ export class ChatIoAdapter extends IoAdapter {
       ...options,
       cors: { origin: this.env.WEB_URL, credentials: true },
       // Token-only auth, no cookies needed; long-polling stays as a fallback.
-      transports: ['websocket', 'polling'],
+      transports: ['websocket'], // no polling: it would need sticky sessions across machines
     }) as Server;
 
     const pub = new Redis(this.env.REDIS_URL, { maxRetriesPerRequest: 2 });

@@ -1,0 +1,43 @@
+# Fly.io — MarketHub API. Deploy from the repo root:
+#   fly deploy --config infra/fly/api.toml
+# Secrets (fly secrets set …): DATABASE_URL, REDIS_URL, JWT_*, INTERNAL_API_KEY,
+# S3_*, STRIPE_*, PAYSTACK_*, RESEND_API_KEY, SENTRY_DSN, OTEL_* — see docs/RUNBOOK.md.
+app = "markethub-api"
+primary_region = "jnb" # Johannesburg: closest Fly region to the launch markets
+
+[build]
+  dockerfile = "../Dockerfile.api"
+
+[deploy]
+  # Migrations run once per deploy, before new machines take traffic; a failure aborts it.
+  release_command = "node ./node_modules/prisma/build/index.js migrate deploy"
+  strategy = "rolling"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "3001"
+  WEB_URL = "https://markethub.example" # change to the real domain
+  API_URL = "https://api.markethub.example"
+  OTEL_SERVICE_NAME = "markethub-api"
+
+[http_service]
+  internal_port = 3001
+  force_https = true
+  # Always on: BullMQ workers (payouts, expiries, reconciliation) and sockets live here.
+  auto_stop_machines = "off"
+  min_machines_running = 2 # Socket.IO across machines via the Redis adapter
+  [http_service.concurrency]
+    type = "connections" # websockets are long-lived connections
+    soft_limit = 800
+    hard_limit = 1000
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/health"
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "20s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb" # argon2id uses 64 MB per hash (§9)

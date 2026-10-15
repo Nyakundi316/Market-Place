@@ -1,0 +1,61 @@
+name: Deploy
+
+# Manual: pick what to ship. Needs repo secret FLY_API_TOKEN and repo
+# variables API_URL / WEB_URL (public URLs baked into the web build).
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: What to deploy
+        type: choice
+        options: [api-then-web, api, web]
+        default: api-then-web
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false # never cut a deploy (or its migration) off halfway
+
+jobs:
+  ci-green:
+    name: Require green CI on this commit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check CI status
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          state=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/check-runs" \
+            --jq '[.check_runs[] | select(.name != "Require green CI on this commit") | .conclusion] | if length == 0 then "none" elif all(. == "success" or . == "skipped") then "ok" else "bad" end')
+          echo "CI: $state"
+          test "$state" = ok
+
+  api:
+    needs: ci-green
+    if: inputs.target != 'web'
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      # The release_command in api.toml runs `prisma migrate deploy` before traffic moves.
+      - run: flyctl deploy --config infra/fly/api.toml --remote-only --env GIT_SHA=${{ github.sha }}
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+
+  web:
+    needs: [ci-green, api]
+    # Web ships after the API so new pages never call endpoints that aren't live yet.
+    if: always() && needs.ci-green.result == 'success' && inputs.target != 'api' && (needs.api.result == 'success' || needs.api.result == 'skipped')
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - run: >
+          flyctl deploy --config infra/fly/web.toml --remote-only
+          --build-arg API_URL=${{ vars.API_URL }}
+          --build-arg WEB_URL=${{ vars.WEB_URL }}
+          --build-arg NEXT_PUBLIC_SENTRY_DSN=${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
+          --build-arg GIT_SHA=${{ github.sha }}
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

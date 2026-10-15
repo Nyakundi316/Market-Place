@@ -1,0 +1,41 @@
+# syntax=docker/dockerfile:1.7
+# MarketHub API. Build from the repo root:
+#   docker build -f infra/Dockerfile.api -t markethub-api .
+# Runs migrations as a separate release step (see infra/fly/api.toml), never on boot.
+
+ARG NODE_VERSION=22
+FROM node:${NODE_VERSION}-bookworm-slim AS base
+ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH CI=1
+RUN corepack enable && corepack prepare pnpm@9.15.0 --activate
+WORKDIR /app
+
+# 1. Prune the monorepo to the API and what it depends on (turbo docs: guides/tools/docker).
+FROM base AS prune
+COPY . .
+RUN pnpm dlx turbo@2.11.7 prune api --docker
+
+# 2. Install (cached on the lockfile), build, then copy out production deps only.
+FROM base AS build
+# argon2 falls back to compiling if no prebuilt binary matches; openssl for Prisma.
+RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ openssl \
+  && rm -rf /var/lib/apt/lists/*
+COPY --from=prune /app/out/json/ .
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
+COPY --from=prune /app/out/full/ .
+RUN pnpm --filter api exec prisma generate \
+  && pnpm turbo run build --filter=api
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm --filter api deploy --prod /out/api \
+  && cd /out/api && ./node_modules/.bin/prisma generate
+
+# 3. Runtime: just node, openssl, the build and its production node_modules.
+FROM node:${NODE_VERSION}-bookworm-slim AS runner
+RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates tini \
+  && rm -rf /var/lib/apt/lists/*
+ENV NODE_ENV=production PORT=3001
+WORKDIR /app
+COPY --from=build --chown=node:node /out/api ./
+USER node
+EXPOSE 3001
+# tini forwards SIGTERM so Nest's shutdown hooks (jobs, sockets, telemetry flush) run.
+ENTRYPOINT ["/usr/bin/tini", "--"]
+CMD ["node", "dist/main.js"]
