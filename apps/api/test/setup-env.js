@@ -11,6 +11,7 @@ Object.assign(process.env, {
   // SeaweedFS from infra/docker-compose.yml (CI starts the same image).
   S3_ENDPOINT: process.env.S3_ENDPOINT ?? 'http://localhost:8333',
   S3_BUCKET: process.env.S3_BUCKET ?? 'markethub',
+  S3_PRIVATE_BUCKET: process.env.S3_PRIVATE_BUCKET ?? 'markethub-private',
   S3_ACCESS_KEY: process.env.S3_ACCESS_KEY ?? 'markethub',
   S3_SECRET_KEY: process.env.S3_SECRET_KEY ?? 'markethub-dev-secret',
   S3_REGION: 'us-east-1',

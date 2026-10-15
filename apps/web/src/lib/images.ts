@@ -36,7 +36,7 @@ async function put(blob: Blob, purpose: 'listing' | 'avatar' | 'chat') {
     headers: { 'Content-Type': contentType },
   });
   if (!res.ok) throw new Error(`Upload failed (${res.status})`);
-  return signed.publicUrl;
+  return signed.publicUrl!; // public purposes always get one
 }
 
 export async function uploadListingPhoto(file: File) {

@@ -13,6 +13,7 @@ import {
   UPLOAD_TYPES,
 } from '@markethub/shared';
 import {
+  GetObjectCommand,
   HeadObjectCommand,
   PutBucketCorsCommand,
   PutObjectCommand,
@@ -35,11 +36,14 @@ export class UploadsService implements OnModuleInit {
   private readonly logger = new Logger(UploadsService.name);
   private readonly s3: S3Client | null;
   private readonly bucket: string;
+  /** Verification documents; never publicly readable (Phase 6). */
+  private readonly privateBucket: string | null;
   readonly publicBase: string;
 
   constructor(@InjectEnv() private readonly env: Env) {
     const { S3_ENDPOINT, S3_BUCKET, S3_ACCESS_KEY, S3_SECRET_KEY } = env;
     this.bucket = S3_BUCKET ?? '';
+    this.privateBucket = env.S3_PRIVATE_BUCKET ?? null;
     this.publicBase = (env.S3_PUBLIC_URL ?? `${S3_ENDPOINT}/${S3_BUCKET}`).replace(/\/+$/, '');
     this.s3 =
       S3_ENDPOINT && S3_BUCKET && S3_ACCESS_KEY && S3_SECRET_KEY
@@ -55,23 +59,27 @@ export class UploadsService implements OnModuleInit {
   /** Dev/test buckets get CORS for the web origin; production buckets are configured in infra. */
   async onModuleInit() {
     if (!this.s3 || this.env.NODE_ENV === 'production') return;
-    await this.s3
-      .send(
-        new PutBucketCorsCommand({
-          Bucket: this.bucket,
-          CORSConfiguration: {
-            CORSRules: [
-              {
-                AllowedOrigins: [this.env.WEB_URL],
-                AllowedMethods: ['PUT', 'GET'],
-                AllowedHeaders: ['content-type'],
-                MaxAgeSeconds: 3600,
-              },
-            ],
-          },
-        }),
-      )
-      .catch((err: unknown) => this.logger.warn({ err }, 'Could not set dev bucket CORS'));
+    for (const Bucket of [this.bucket, this.privateBucket].filter((b): b is string => !!b)) {
+      await this.corsFor(Bucket);
+    }
+  }
+
+  private async corsFor(Bucket: string) {
+    await this.s3!.send(
+      new PutBucketCorsCommand({
+        Bucket,
+        CORSConfiguration: {
+          CORSRules: [
+            {
+              AllowedOrigins: [this.env.WEB_URL],
+              AllowedMethods: ['PUT', 'GET'],
+              AllowedHeaders: ['content-type'],
+              MaxAgeSeconds: 3600,
+            },
+          ],
+        },
+      }),
+    ).catch((err: unknown) => this.logger.warn({ err }, 'Could not set dev bucket CORS'));
   }
 
   get enabled() {
@@ -81,21 +89,27 @@ export class UploadsService implements OnModuleInit {
   async sign(userId: string, input: SignUploadInput): Promise<PresignedUploadDto> {
     const s3 = this.client();
     const key = `${input.purpose}/${userId}/${randomUUID()}.${UPLOAD_TYPES[input.contentType]}`;
+    const isPrivate = input.purpose === 'verification';
     const uploadUrl = await getSignedUrl(
       s3,
       new PutObjectCommand({
-        Bucket: this.bucket,
+        Bucket: isPrivate ? this.privateBucketOrThrow() : this.bucket,
         Key: key,
         ContentType: input.contentType,
         ContentLength: input.size,
-        CacheControl: 'public, max-age=31536000, immutable',
+        CacheControl: isPrivate ? 'private, no-store' : 'public, max-age=31536000, immutable',
       }),
       {
         expiresIn: SIGNED_URL_TTL_S,
         signableHeaders: new Set(['content-type', 'content-length']),
       },
     );
-    return { uploadUrl, publicUrl: `${this.publicBase}/${key}`, key, expiresIn: SIGNED_URL_TTL_S };
+    return {
+      uploadUrl,
+      publicUrl: isPrivate ? null : `${this.publicBase}/${key}`,
+      key,
+      expiresIn: SIGNED_URL_TTL_S,
+    };
   }
 
   /** The key for a URL we issued to this user for this purpose, or null. */
@@ -130,6 +144,46 @@ export class UploadsService implements OnModuleInit {
     if (missing.some(Boolean)) {
       throw new BadRequestException('Some uploads did not finish — try adding those photos again');
     }
+  }
+
+  /** Private keys this user uploaded and that exist; returns them normalised. */
+  async assertPrivateUploaded(keys: string[], userId: string): Promise<string[]> {
+    const s3 = this.client();
+    const Bucket = this.privateBucketOrThrow();
+    const pattern = new RegExp(`^verification/${userId}/[0-9a-f-]{36}\\.(jpg|png|webp)$`);
+    for (const key of keys) {
+      if (!pattern.test(key)) {
+        throw new BadRequestException({ message: 'Unknown upload', fields: { documents: [key] } });
+      }
+    }
+    const missing = await Promise.all(
+      keys.map((Key) =>
+        s3.send(new HeadObjectCommand({ Bucket, Key })).then(
+          () => null,
+          () => Key,
+        ),
+      ),
+    );
+    if (missing.some(Boolean)) {
+      throw new BadRequestException('A document didn’t finish uploading — add it again');
+    }
+    return keys;
+  }
+
+  /** A five-minute read link for an admin reviewing a private document. */
+  signedRead(key: string): Promise<string> {
+    return getSignedUrl(
+      this.client(),
+      new GetObjectCommand({ Bucket: this.privateBucketOrThrow(), Key: key }),
+      { expiresIn: SIGNED_URL_TTL_S },
+    );
+  }
+
+  private privateBucketOrThrow(): string {
+    if (!this.privateBucket) {
+      throw new ServiceUnavailableException('Document uploads are not configured');
+    }
+    return this.privateBucket;
   }
 
   private client(): S3Client {

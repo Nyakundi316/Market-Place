@@ -89,7 +89,8 @@ export interface PresignedUploadDto {
   /** PUT the file here with the same Content-Type */
   uploadUrl: string;
   /** public URL to store on the listing/profile once uploaded */
-  publicUrl: string;
+  /** Null for private uploads (verification documents): only `key` is used. */
+  publicUrl: string | null;
   key: string;
   expiresIn: number;
 }
