@@ -29,6 +29,10 @@ The browser only talks to `localhost:3000`; `/api/*` is proxied to Nest so auth 
 
 CI (`.github/workflows/ci.yml`) runs all of the above against throwaway Postgres, Redis and Mailhog services.
 
+## Deploying
+
+Docker images (`infra/Dockerfile.api`, `infra/Dockerfile.web`) are built by CI on every push. Production runs on Fly.io (`infra/fly/*.toml`) via the manual **Deploy** workflow; migrations run as the release step. See [docs/RUNBOOK.md](docs/RUNBOOK.md) for setup, rollbacks and incident playbooks, and [load/README.md](load/README.md) for k6 load tests.
+
 ## Environment
 
 Validated at boot by `packages/shared/src/env.ts`; the API refuses to start on a bad value. See `.env.example` for every key. In production the S3, Stripe (incl. `STRIPE_PUBLISHABLE_KEY`), Paystack and Resend keys are required and `WEB_URL`/`API_URL` must be https.
@@ -133,6 +137,11 @@ Gateways: Paystack for NGN/GHS/KES/ZAR, Stripe for everything else. **Without ke
 | `GET /admin/users` · `POST /admin/users/:id/warn\|ban\|unban` | ban revokes sessions and drops sockets |
 | `GET /admin/verifications` · `POST /admin/verify/:userId` | 5-minute signed document links; `{ requestId, decision, note? }` |
 | `GET /admin/audit` | `entityType`, `entityId`, `actorId`, `action` (prefix) filters |
+
+### SEO
+| | |
+| --- | --- |
+| `GET /seo/sitemap` | public: live listings, active categories and sellers with listings, for `/sitemap.xml` |
 
 ### Notifications
 | | |

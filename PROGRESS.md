@@ -1,6 +1,6 @@
 # Progress
 
-_Last updated: 2026-10-16_
+_Last updated: 2026-10-15_
 
 ## Shipped — Phase 1 (Foundation) ✅
 - **1.0** `packages/config`: shared tsconfig (base/nest/next/lib), ESLint flat config, Prettier; LF via `.gitattributes`; pnpm pinned to 9.15
@@ -112,8 +112,28 @@ Decisions:
 
 Local verification note: the last local browser run of `trust.spec.ts` was blocked by Docker port forwarding to Redis/Postgres failing under memory pressure (`wslrelay` resets); the API suites for 6.2–6.6 passed locally, and CI runs the browser specs on clean services.
 
-## Next — Phase 7 (Launch)
-SEO (metadata, sitemap, structured data); PWA; i18n scaffold (EN); k6 on listings + chat; Sentry + OTel; deploy (Fly/Railway/ECS); runbook.
+## Shipped — Phase 7 (Launch prep) ✅
+- **7.1** SEO: `/sitemap.xml` (from `GET /seo/sitemap`), `/robots.txt` (crawlable only on production https), JSON-LD (WebSite+search, Product/Service+Offer, breadcrumbs, ProfilePage; `<` escaped), metadataBase, noindex on private pages and sold listings
+- **7.2** PWA: manifest, icons drawn by next/og (no binaries), offline page, service worker that never caches /api or signed-in data
+- **7.3** i18n scaffold: typed `en` catalogue, `t()` with params, shell migrated (text unchanged)
+- **7.4** Observability: OpenTelemetry traces (OTLP) and Sentry errors, both off until configured; Sentry 11's default data collection (bodies, headers, cookies, user) switched off
+- **7.5** k6: `load/listings.js`, `load/chat.js` (Socket.IO by hand), `seed:load` fixtures; smoke-tested locally (chat p95 delivery 123 ms, 0 errors)
+- **7.6** Deploy: Dockerfiles (API + web standalone), Fly configs, CI builds both images, manual deploy workflow gated on green CI
+- **7.7** `docs/RUNBOOK.md`
+
+Fixes found on the way:
+- **SSR rate limiting**: every server-rendered page fetch came from the web server's one IP, so all public SSR traffic shared 100 req/min → `INTERNAL_API_KEY` exemption (GET, global bucket only)
+- Socket.IO websocket-only (polling across machines would need sticky sessions)
+- next/og icons on the edge runtime (Node runtime font loading fails on Windows); Next standalone output only inside Docker (symlinks need Developer Mode on Windows)
+- Docker: Prisma schema must be present before `pnpm install` (postinstall generate)
+
+Tests: shared 68 · api unit 25 · api e2e 220 · web unit 29 · Playwright 34 (33 first try, 1 passed on retry — the known-flaky live chat test) · images build in CI
+
+## Before launch (everything)
+- Real secrets for Stripe/Paystack (see below), `INTERNAL_API_KEY`, R2 buckets, Resend domain, `WEB_URL`/`API_URL`
+- Fly account + `FLY_API_TOKEN` secret and `API_URL`/`WEB_URL` repo variables for the Deploy workflow
+- **Open decisions:** SMS provider for phone verification; push notifications (FCM device tokens)
+- Run k6 against staging at expected peak before opening the doors
 
 ## Before launch (payments)
 - Put real keys in `.env`: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_CONNECT_CLIENT_ID`, `PAYSTACK_SECRET_KEY`, `PAYSTACK_WEBHOOK_SECRET`
