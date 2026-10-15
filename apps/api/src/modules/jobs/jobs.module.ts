@@ -8,7 +8,9 @@ import {
 } from '@nestjs/common';
 import type { Env } from '@markethub/shared';
 import { type JobsOptions, Queue, Worker, type Processor } from 'bullmq';
+import * as Sentry from '@sentry/node';
 import Redis from 'ioredis';
+import { sentryEnabled, shutdownTelemetry } from '../../instrumentation';
 import { ENV } from '../../config/env.validation';
 
 /**
@@ -17,7 +19,15 @@ import { ENV } from '../../config/env.validation';
  * Custom jobIds may contain ':' only as exactly three parts (`a:b:c`);
  * anything else makes `add()` throw, so prefer `-` as the separator.
  */
-export const QUEUES = ['notify', 'email', 'offer', 'order', 'payout', 'reconcile', 'stats'] as const;
+export const QUEUES = [
+  'notify',
+  'email',
+  'offer',
+  'order',
+  'payout',
+  'reconcile',
+  'stats',
+] as const;
 export type QueueName = (typeof QUEUES)[number];
 
 /** §8: idempotent jobs, exponential backoff, max 5 attempts, then the DLQ. */
@@ -72,6 +82,9 @@ export class JobsService implements OnApplicationShutdown {
         final ? 'job failed for good → dead-letter' : 'job failed, will retry',
       );
       if (final) {
+        if (sentryEnabled) {
+          Sentry.captureException(err, { tags: { queue: name, job: job.name, jobId: job.id } });
+        }
         void this.queue(DEAD_LETTER)
           .add(`${name}:${job.name}`, { data: job.data, error: err.message, failedAt: Date.now() })
           .catch((e: unknown) => this.logger.error({ err: e }, 'dead-letter enqueue failed'));
@@ -88,6 +101,7 @@ export class JobsService implements OnApplicationShutdown {
     await Promise.allSettled(
       [this.connection, ...this.owned].map((c) => c.quit().catch(() => c.disconnect())),
     );
+    await shutdownTelemetry(); // last, so spans from closing the workers make it out
   }
 }
 

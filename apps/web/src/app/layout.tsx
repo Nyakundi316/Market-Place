@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
 import { SITE_URL } from '@/lib/seo';
 import './globals.css';
+import { SentryClient } from '@/components/sentry-client';
 import { ServiceWorker } from '@/components/service-worker';
 import { Providers } from './providers';
 
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className={`${sans.variable} ${mono.variable} font-sans antialiased`}>
         <Providers>{children}</Providers>
         <ServiceWorker />
+        <SentryClient />
       </body>
     </html>
   );

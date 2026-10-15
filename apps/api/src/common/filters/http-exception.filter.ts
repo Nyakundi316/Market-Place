@@ -7,7 +7,9 @@ import {
   Logger,
 } from '@nestjs/common';
 import type { ApiErrorDto } from '@markethub/shared';
+import * as Sentry from '@sentry/node';
 import type { Request, Response } from 'express';
+import { sentryEnabled } from '../../instrumentation';
 
 /**
  * Single error shape for every failure (ApiErrorDto). Unknown errors become a
@@ -27,6 +29,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
 
     if (body.statusCode >= 500) {
       this.logger.error({ err: exception, requestId: body.requestId }, 'Unhandled error');
+      // The request id ties a Sentry event to our logs (and the client's error toast).
+      if (sentryEnabled) {
+        Sentry.captureException(exception, {
+          tags: { requestId: body.requestId, route: req.route?.path as string | undefined },
+        });
+      }
     }
     res.status(body.statusCode).json(body);
   }

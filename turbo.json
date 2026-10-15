@@ -16,7 +16,9 @@
       ],
       "env": [
         "API_URL",
-        "API_INTERNAL_URL"
+        "API_INTERNAL_URL",
+        "WEB_URL",
+        "GIT_SHA"
       ]
     },
     "dev": {

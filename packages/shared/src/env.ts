@@ -60,6 +60,14 @@ const base = z.object({
   MAIL_FROM: z.string().default('MarketHub <no-reply@markethub.local>'),
   FCM_SERVER_KEY: optional,
 
+  // Observability (Phase 7): both off unless set. Read by src/instrumentation.ts
+  // before validation; declared here so a typo'd URL still fails the boot.
+  SENTRY_DSN: optional.pipe(z.string().url().optional()),
+  SENTRY_ENVIRONMENT: optional,
+  OTEL_EXPORTER_OTLP_ENDPOINT: optional.pipe(z.string().url().optional()),
+  OTEL_SERVICE_NAME: optional,
+  GIT_SHA: optional,
+
   PLATFORM_FEE_PERCENT: z.coerce.number().min(0).max(100).default(2),
   ESCROW_AUTO_RELEASE_HOURS: z.coerce.number().int().positive().default(72),
   DISPUTE_WINDOW_DAYS: z.coerce.number().int().positive().default(7),

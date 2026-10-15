@@ -19,6 +19,8 @@ const nextConfig = {
   // browser needs the API's public origin. Inlined at build time from API_URL.
   env: { NEXT_PUBLIC_API_URL: process.env.API_URL ?? 'http://localhost:3001' },
   poweredByHeader: false,
+  // Next 14: enables src/instrumentation.ts (server-side Sentry).
+  experimental: { instrumentationHook: true },
   // Same-origin proxy so auth cookies stay first-party (see PROJECT_BRIEF §3 addendum).
   async rewrites() {
     return [{ source: '/api/:path*', destination: `${API_ORIGIN}/:path*` }];
