@@ -1,6 +1,6 @@
 # Progress
 
-_Last updated: 2026-10-15_
+_Last updated: 2026-10-16_
 
 ## Shipped — Phase 1 (Foundation) ✅
 - **1.0** `packages/config`: shared tsconfig (base/nest/next/lib), ESLint flat config, Prettier; LF via `.gitattributes`; pnpm pinned to 9.15
@@ -93,8 +93,27 @@ Decisions:
 
 Tests: shared 62 · api unit 23 · api e2e 198 · web unit 23 · Playwright 30 — all green, 0 lint warnings. One full Playwright run had 2 failures in the photo-upload wait under load; they passed on the rerun.
 
-## Next — Phase 6 (Trust)
-Reviews + trigger UI; verification (email/phone/ID/business); reports + admin panel (incl. the dispute queue UI over `GET /admin/disputes`); moderation; ban/warn; audit viewer; seller analytics.
+## Shipped — Phase 6 (Trust) ✅
+- **6.1** `VerificationRequest`; private bucket for documents (anonymous read scoped to the public bucket; compose init retries); trust contracts
+- **6.2** reviews: buyer rates seller on completed orders, one per order, rating trigger, `GET /reviews/mine`
+- **6.3** verification: phone codes (hash in Redis, tries/send caps, dev outbox), ID/business documents, admin approve/reject with signed previews
+- **6.4** reports (listing/user/message/review, one open per reporter) and moderation: remove listing, hide review, warn, ban (sessions revoked, sockets dropped), unban — all audited in-transaction
+- **6.5** admin overview, user search (warnings, open reports), audit viewer
+- **6.6** seller analytics + nightly response rates
+- **6.7** web: review form, report dialog, Settings → Verification, `/seller` stats, `/admin` (overview, reports, disputes, verifications, users, audit)
+- **6.8** API e2e: reviews 3, verification 6, admin 9, analytics 2; Playwright `trust.spec.ts` (report → admin removes; ID → admin approves → badge)
+
+Decisions:
+- Only the buyer reviews (one review per order per §3); hidden reviews leave the average
+- Report resolution closes every open report on the same thing and thanks each reporter (no details shared)
+- Admins can't be warned/banned from the panel, and nobody moderates themselves
+- Phone verification needs an SMS provider before launch (not in the §1 stack) — **open question**
+- Response rate = buyer chats in the last 90 days answered within 24h
+
+Local verification note: the last local browser run of `trust.spec.ts` was blocked by Docker port forwarding to Redis/Postgres failing under memory pressure (`wslrelay` resets); the API suites for 6.2–6.6 passed locally, and CI runs the browser specs on clean services.
+
+## Next — Phase 7 (Launch)
+SEO (metadata, sitemap, structured data); PWA; i18n scaffold (EN); k6 on listings + chat; Sentry + OTel; deploy (Fly/Railway/ECS); runbook.
 
 ## Before launch (payments)
 - Put real keys in `.env`: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_CONNECT_CLIENT_ID`, `PAYSTACK_SECRET_KEY`, `PAYSTACK_WEBHOOK_SECRET`

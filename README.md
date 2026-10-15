@@ -115,6 +115,25 @@ Flow (§7): pay → gateway → **webhook** marks the order paid and opens an `E
 
 Gateways: Paystack for NGN/GHS/KES/ZAR, Stripe for everything else. **Without keys (dev/test) both are served by a sandbox**: Stripe's test cards (`4242 4242 4242 4242` pays, `4000 0000 0000 0002` declines), signed events through the same webhook path, instant payouts. Production refuses to boot without real keys.
 
+### Trust: reviews, reports, verification
+| | |
+| --- | --- |
+| `POST /reviews` · `GET /reviews/mine?role=given\|received` | buyer rates the seller once per completed order; a trigger keeps the profile average |
+| `POST /reports` | `{ entityType: listing\|user\|message\|review, entityId, reason, details? }`; one open report per person per thing |
+| `GET /me/verification` · `POST /me/verification` | ID (`documentType`) or business (`businessName`, `registrationNumber`) with document keys from `POST /images/sign` (`purpose: verification`, private bucket) |
+| `POST /me/phone/send-code` · `POST /me/phone/verify` | 6-digit code, 10 min, 5 tries, 3 sends / 15 min. Dev/test: Redis outbox `sms:outbox:{phone}`; production: unavailable until an SMS provider is chosen |
+| `GET /me/analytics?days=7\|30\|90` | seller analytics (views, offers, orders, payouts, reply rate, rating) |
+
+### Admin (role = admin, every action audited)
+| | |
+| --- | --- |
+| `GET /admin/overview` | queue counts and last-7-day numbers |
+| `GET /admin/reports` · `POST /admin/reports/:id/resolve` | `{ action: resolve\|dismiss, note? }` closes every open report on that thing |
+| `POST /admin/listings/:id/remove` · `POST /admin/reviews/:id/hide` | `{ reason }` |
+| `GET /admin/users` · `POST /admin/users/:id/warn\|ban\|unban` | ban revokes sessions and drops sockets |
+| `GET /admin/verifications` · `POST /admin/verify/:userId` | 5-minute signed document links; `{ requestId, decision, note? }` |
+| `GET /admin/audit` | `entityType`, `entityId`, `actorId`, `action` (prefix) filters |
+
 ### Notifications
 | | |
 | --- | --- |
@@ -130,6 +149,7 @@ Gateways: Paystack for NGN/GHS/KES/ZAR, Stripe for everything else. **Without ke
 | `order` · `payment-timeout` | cancels an unpaid order after 24 h |
 | `payout` · `release` | transfers the seller's net once the order completes |
 | `payout` · `auto-release` | completes and releases `ESCROW_AUTO_RELEASE_HOURS` after delivery |
+| `stats` · `response-rates` | 02:30 UTC: writes each seller's 24h reply rate to their profile |
 | `reconcile` · `payments` | 03:00 UTC: compares recent charges with the gateway; recovers missed webhooks, alerts admins on mismatch |
 
 All jobs are idempotent, retry 5× with exponential backoff, then go to `dead-letter`.
