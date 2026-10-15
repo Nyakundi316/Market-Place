@@ -28,6 +28,9 @@ const base = z.object({
   JWT_ACCESS_SECRET: secret,
   JWT_REFRESH_SECRET: secret,
   JWT_ACCESS_TTL: z.string().regex(DURATION).default('15m'),
+  // Documented extra: the web server's anonymous SSR reads all come from one
+  // IP; with this header they skip the per-IP global bucket (GET only).
+  INTERNAL_API_KEY: secret.optional(),
   JWT_REFRESH_TTL: z.string().regex(DURATION).default('7d'),
 
   GOOGLE_CLIENT_ID: optional,
@@ -75,6 +78,7 @@ const base = z.object({
 
 // Keys that may be blank locally but must exist in production.
 const REQUIRED_IN_PROD = [
+  'INTERNAL_API_KEY',
   'S3_ENDPOINT',
   'S3_BUCKET',
   'S3_ACCESS_KEY',

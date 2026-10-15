@@ -70,6 +70,36 @@ describe('rate limiting (e2e)', () => {
     expect(results.filter((s) => s === 429).length).toBe(120 - allowed);
   });
 
+  it('the web server’s anonymous GETs skip the global bucket — nothing else does', async () => {
+    const server = app.getHttpServer();
+    const key = process.env.INTERNAL_API_KEY!;
+    const statuses = await Promise.all(
+      Array.from({ length: 120 }, () =>
+        request(server)
+          .get('/health')
+          .set('x-internal-key', key)
+          .then((r) => r.status),
+      ),
+    );
+    expect(statuses.every((s) => s === 200)).toBe(true);
+
+    // A wrong key, or a write, gets no pass.
+    const wrong = await Promise.all(
+      Array.from({ length: 110 }, () =>
+        request(server)
+          .get('/health')
+          .set('x-internal-key', key.replace(/.$/, 'x'))
+          .then((r) => r.status),
+      ),
+    );
+    expect(wrong.filter((s) => s === 429).length).toBeGreaterThan(0);
+    await resetRateLimits();
+    for (let i = 0; i < 10; i++) {
+      await request(server).post('/probe/login').set('x-internal-key', key).expect(201);
+    }
+    await request(server).post('/probe/login').set('x-internal-key', key).expect(429);
+  });
+
   it('token bucket refills over time', async () => {
     const limiter = app.get(RateLimitService);
     const policy = { capacity: 2, windowMs: 200 };

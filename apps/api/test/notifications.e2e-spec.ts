@@ -107,10 +107,7 @@ describe('Notifications (e2e)', () => {
   it("can't read or mark someone else's notifications", async () => {
     await seed(alice.id, 1);
     const mine = await db.notification.findFirstOrThrow({ where: { userId: alice.id } });
-    await http()
-      .post(`/notifications/${mine.id}/read`)
-      .set('Authorization', bob.auth)
-      .expect(404);
+    await http().post(`/notifications/${mine.id}/read`).set('Authorization', bob.auth).expect(404);
     const bobs = await http().get('/notifications').set('Authorization', bob.auth).expect(200);
     expect(bobs.body.items).toEqual([]);
     await http().post('/notifications/read-all').set('Authorization', bob.auth).expect(200);

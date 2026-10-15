@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import {
   type CanActivate,
   type ExecutionContext,
@@ -6,8 +7,10 @@ import {
   Injectable,
   SetMetadata,
 } from '@nestjs/common';
+import type { Env } from '@markethub/shared';
 import { Reflector } from '@nestjs/core';
 import type { Request, Response } from 'express';
+import { InjectEnv } from '../../config/env.validation';
 import { POLICIES, type PolicyName, RateLimitService } from './rate-limit.service';
 
 const RATE_LIMIT = 'rateLimit';
@@ -29,10 +32,29 @@ export const SkipRateLimit = () => SetMetadata(SKIP, true);
  */
 @Injectable()
 export class RateLimitGuard implements CanActivate {
+  private readonly internalKey: Buffer | null;
+
   constructor(
     private readonly limiter: RateLimitService,
     private readonly reflector: Reflector,
-  ) {}
+    @InjectEnv() env: Env,
+  ) {
+    this.internalKey = env.INTERNAL_API_KEY ? Buffer.from(env.INTERNAL_API_KEY) : null;
+  }
+
+  /**
+   * The web server renders public pages for everyone from one IP. Its
+   * anonymous GETs carry x-internal-key and skip the per-IP global bucket —
+   * otherwise all SSR traffic would share 100 requests a minute. Named
+   * buckets (auth, payment) still apply, and nothing else is exempt.
+   */
+  private isInternalRead(req: Request & { user?: unknown }) {
+    if (!this.internalKey || req.user || req.method !== 'GET') return false;
+    const given = req.headers['x-internal-key'];
+    if (typeof given !== 'string') return false;
+    const buf = Buffer.from(given);
+    return buf.length === this.internalKey.length && timingSafeEqual(buf, this.internalKey);
+  }
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     if (ctx.getType() !== 'http') return true;
@@ -49,7 +71,9 @@ export class RateLimitGuard implements CanActivate {
       ctx.getClass(),
     ]);
 
-    const checks: [string, PolicyName][] = [[`global:${callerKey}`, 'global']];
+    const checks: [string, PolicyName][] = this.isInternalRead(req)
+      ? []
+      : [[`global:${callerKey}`, 'global']];
     if (named) checks.push([`${named}:${named === 'auth' ? ipKey : callerKey}`, named]);
 
     for (const [key, name] of checks) {

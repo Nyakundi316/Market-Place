@@ -15,7 +15,11 @@ describe('GET /seo/sitemap (e2e)', () => {
   afterAll(() => app.close());
 
   it('lists live listings and active sellers only, publicly', async () => {
-    const [seller, buyer, banned] = await Promise.all([makeUser(app), makeUser(app), makeUser(app)]);
+    const [seller, buyer, banned] = await Promise.all([
+      makeUser(app),
+      makeUser(app),
+      makeUser(app),
+    ]);
     const live = (await seedOrder(app, buyer, seller)).listing;
     const removed = (await seedOrder(app, buyer, seller)).listing;
     await db.listing.update({ where: { id: removed.id }, data: { status: 'removed' } });
@@ -37,7 +41,12 @@ describe('GET /seo/sitemap (e2e)', () => {
     expect(usernames).not.toContain(banned.username);
     expect(usernames).not.toContain(buyer.username); // nothing listed
 
-    expect(res.body.categories.some((c: { slug: string }) => c.slug === 'seeded-orders')).toBe(true);
-    expect(res.body.listings[0]).toEqual({ slug: expect.any(String), updatedAt: expect.any(String) });
+    expect(res.body.categories.some((c: { slug: string }) => c.slug === 'seeded-orders')).toBe(
+      true,
+    );
+    expect(res.body.listings[0]).toEqual({
+      slug: expect.any(String),
+      updatedAt: expect.any(String),
+    });
   });
 });

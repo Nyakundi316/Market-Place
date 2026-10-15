@@ -8,6 +8,7 @@ Object.assign(process.env, {
   REDIS_URL: process.env.REDIS_URL_TEST ?? 'redis://localhost:6379/1',
   JWT_ACCESS_SECRET: 'test-access-secret-0123456789abcdefghij',
   JWT_REFRESH_SECRET: 'test-refresh-secret-0123456789abcdefghij',
+  INTERNAL_API_KEY: 'test-internal-key-0123456789abcdefghijklm',
   // SeaweedFS from infra/docker-compose.yml (CI starts the same image).
   S3_ENDPOINT: process.env.S3_ENDPOINT ?? 'http://localhost:8333',
   S3_BUCKET: process.env.S3_BUCKET ?? 'markethub',
