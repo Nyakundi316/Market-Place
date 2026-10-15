@@ -15,6 +15,7 @@ export const NOTIFICATION_TYPES = [
   'order.completed',
   'order.cancelled',
   'order.paid',
+  'payment.failed',
   'order.disputed',
   'order.refunded',
   'dispute.resolved',

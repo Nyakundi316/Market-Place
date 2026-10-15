@@ -21,6 +21,7 @@ import { MailModule } from './modules/mail/mail.service';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { OffersModule } from './modules/offers/offers.module';
 import { OrdersModule } from './modules/orders/orders.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { UsersModule } from './modules/users/users.module';
 import { PrismaModule } from './prisma/prisma.module';
@@ -45,6 +46,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     NotificationsModule,
     OffersModule,
     OrdersModule,
+    PaymentsModule,
     LoggerModule.forRootAsync({
       useFactory: () => {
         const env = loadEnv();

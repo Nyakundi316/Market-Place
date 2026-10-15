@@ -13,7 +13,7 @@ export async function createApp(extraControllers: Type[] = []): Promise<INestApp
     imports: [AppModule],
     controllers: extraControllers,
   }).compile();
-  const app = configureApp(moduleRef.createNestApplication(), loadEnv());
+  const app = configureApp(moduleRef.createNestApplication({ rawBody: true }), loadEnv());
   await app.init();
   return app;
 }

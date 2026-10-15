@@ -32,6 +32,7 @@ import { ChatService } from '../chat/chat.service';
 import { RealtimeService } from '../chat/realtime.service';
 import { JobsService } from '../jobs/jobs.module';
 import { NotificationsService } from '../notifications/notifications.service';
+import { EscrowService } from '../payments/escrow.service';
 import { toOffer } from '../offers/offers.mapper';
 import {
   orderInclude,
@@ -69,6 +70,7 @@ export class OrdersService implements OnModuleInit {
     private readonly jobs: JobsService,
     private readonly notifications: NotificationsService,
     private readonly audit: AuditService,
+    private readonly escrow: EscrowService,
     @InjectEnv() private readonly env: Env,
   ) {}
 
@@ -99,7 +101,8 @@ export class OrdersService implements OnModuleInit {
     if (user.id !== buyerId) throw new ForbiddenException('Only the buyer can place this order');
 
     const existing = await this.findByOffer(offer.id);
-    if (existing) return { order: toOrder(existing, user.id), created: false };
+    if (existing)
+      return { order: toOrder(existing, user.id, this.env.DISPUTE_WINDOW_DAYS), created: false };
     if (offer.status !== 'accepted') {
       throw new ConflictException('Only an accepted offer can become an order');
     }
@@ -174,7 +177,8 @@ export class OrdersService implements OnModuleInit {
       // Lost a race with a concurrent submit for the same offer.
       if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002') {
         const winner = await this.findByOffer(offer.id);
-        if (winner) return { order: toOrder(winner, user.id), created: false };
+        if (winner)
+          return { order: toOrder(winner, user.id, this.env.DISPUTE_WINDOW_DAYS), created: false };
       }
       throw err;
     }
@@ -204,7 +208,7 @@ export class OrdersService implements OnModuleInit {
       'order.created',
       `New order ${order.orderNumber} for “${order.listing.title}”`,
     );
-    return { order: toOrder(order, user.id), created: true };
+    return { order: toOrder(order, user.id, this.env.DISPUTE_WINDOW_DAYS), created: true };
   }
 
   // ─── Status changes ─────────────────────────────────────────────────────
@@ -298,6 +302,12 @@ export class OrdersService implements OnModuleInit {
       return updated;
     });
 
+    // §7: confirmation releases escrow now; "delivered" starts the auto-release clock.
+    if (action === 'confirm-delivery') await this.escrow.queueRelease(order.id);
+    if (action === 'deliver' && order.deliveredAt) {
+      await this.escrow.scheduleAutoRelease(order.id, order.deliveredAt);
+    }
+
     const other = order.buyerId === user.id ? order.sellerId : order.buyerId;
     const what = `${order.orderNumber} (“${order.listing.title}”)`;
     const copy: Record<StatusAction, [NotificationType, string]> = {
@@ -314,7 +324,7 @@ export class OrdersService implements OnModuleInit {
       title,
       reason ?? (action === 'ship' ? order.trackingNumber : null),
     );
-    return toOrder(order, user.id);
+    return toOrder(order, user.id, this.env.DISPUTE_WINDOW_DAYS);
   }
 
   private async applyCancel(tx: Tx, order: Order, actorId: string | null, reason?: string) {
@@ -385,7 +395,10 @@ export class OrdersService implements OnModuleInit {
       take: q.limit + 1,
     });
     const { page, nextCursor } = pageOf(rows, q.limit, (r) => r.createdAt);
-    return { items: page.map((r) => toOrderListItem(r, userId)), nextCursor };
+    return {
+      items: page.map((r) => toOrderListItem(r, userId, this.env.DISPUTE_WINDOW_DAYS)),
+      nextCursor,
+    };
   }
 
   async get(userId: string, id: string): Promise<OrderDto> {
@@ -394,7 +407,7 @@ export class OrdersService implements OnModuleInit {
       include: orderInclude,
     });
     if (!order) throw new NotFoundException('Order not found');
-    return toOrder(order, userId);
+    return toOrder(order, userId, this.env.DISPUTE_WINDOW_DAYS);
   }
 
   // ─── Helpers ────────────────────────────────────────────────────────────

@@ -14,6 +14,13 @@ const RATE_LIMIT = 'rateLimit';
 /** Adds a stricter bucket on top of the global one, e.g. @RateLimit('auth'). */
 export const RateLimit = (policy: Exclude<PolicyName, 'global'>) => SetMetadata(RATE_LIMIT, policy);
 
+const SKIP = 'rateLimitSkip';
+/**
+ * For signature-authenticated machine callers (gateway webhooks): they come
+ * from a few shared IPs, and a throttled event is just a retried event.
+ */
+export const SkipRateLimit = () => SetMetadata(SKIP, true);
+
 /**
  * Registered after JwtAuthGuard so req.user is known: buckets are per user,
  * or per IP for anonymous calls. Auth routes are always per IP — there's no
@@ -29,6 +36,9 @@ export class RateLimitGuard implements CanActivate {
 
   async canActivate(ctx: ExecutionContext): Promise<boolean> {
     if (ctx.getType() !== 'http') return true;
+    if (this.reflector.getAllAndOverride<boolean>(SKIP, [ctx.getHandler(), ctx.getClass()])) {
+      return true;
+    }
     const req = ctx.switchToHttp().getRequest<Request & { user?: { id: string } }>();
     const res = ctx.switchToHttp().getResponse<Response>();
 

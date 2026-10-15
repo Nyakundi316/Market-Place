@@ -101,7 +101,7 @@ describe('Orders (e2e)', () => {
         deliveryMethod: 'courier',
         deliveryAddress: address,
         notes: 'Call on arrival',
-        actions: ['cancel'],
+        actions: ['cancel', 'pay'],
         buyer: { userId: buyer.id },
         seller: { userId: seller.id },
       });

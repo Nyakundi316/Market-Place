@@ -17,7 +17,7 @@ import { ENV } from '../../config/env.validation';
  * Custom jobIds may contain ':' only as exactly three parts (`a:b:c`);
  * anything else makes `add()` throw, so prefer `-` as the separator.
  */
-export const QUEUES = ['notify', 'email', 'offer', 'order'] as const;
+export const QUEUES = ['notify', 'email', 'offer', 'order', 'payout', 'reconcile'] as const;
 export type QueueName = (typeof QUEUES)[number];
 
 /** §8: idempotent jobs, exponential backoff, max 5 attempts, then the DLQ. */

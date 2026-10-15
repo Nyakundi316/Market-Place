@@ -6,7 +6,10 @@ import { loadEnv } from './config/env.validation';
 
 async function main() {
   const env = loadEnv(); // throws on bad env before anything listens
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create(AppModule, {
+    bufferLogs: true,
+    rawBody: true, // §7: webhook signatures are over the exact bytes
+  });
   if (env.NODE_ENV === 'production') app.getHttpAdapter().getInstance().set('trust proxy', 1);
   configureApp(app, env);
   await app.listen(env.PORT);

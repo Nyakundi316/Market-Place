@@ -22,7 +22,19 @@ export type OrderRow = Prisma.OrderGetPayload<{ include: typeof orderInclude }>;
 export const paymentDueAt = (createdAt: Date) =>
   new Date(createdAt.getTime() + ORDER_PAYMENT_WINDOW_HOURS * 3_600_000);
 
-export function toOrderListItem(o: OrderRow, viewerId: string): OrderListItemDto {
+/** Status allows it, but the clock may not: unpaid past the window, disputes past theirs. */
+function actionsFor(o: OrderRow, side: 'buyer' | 'seller', disputeDays: number) {
+  const now = Date.now();
+  return orderActionsFor(o.status, side).filter((a) => {
+    if (a === 'pay') return paymentDueAt(o.createdAt).getTime() > now;
+    if (a === 'dispute' && o.deliveredAt) {
+      return o.deliveredAt.getTime() + disputeDays * 86_400_000 > now;
+    }
+    return true;
+  });
+}
+
+export function toOrderListItem(o: OrderRow, viewerId: string, disputeDays = 7): OrderListItemDto {
   const side = o.buyerId === viewerId ? 'buyer' : 'seller';
   return {
     id: o.id,
@@ -49,14 +61,14 @@ export function toOrderListItem(o: OrderRow, viewerId: string): OrderListItemDto
     createdAt: o.createdAt.toISOString(),
     updatedAt: o.updatedAt.toISOString(),
     paymentDueAt: o.status === 'awaiting_payment' ? paymentDueAt(o.createdAt).toISOString() : null,
-    actions: orderActionsFor(o.status, side),
+    actions: actionsFor(o, side, disputeDays),
   };
 }
 
 /** Only ever built for one of the two parties — the address is theirs to see. */
-export function toOrder(o: OrderRow, viewerId: string): OrderDto {
+export function toOrder(o: OrderRow, viewerId: string, disputeDays = 7): OrderDto {
   return {
-    ...toOrderListItem(o, viewerId),
+    ...toOrderListItem(o, viewerId, disputeDays),
     deliveryAddress: (o.deliveryAddress as DeliveryAddress | null) ?? null,
     notes: o.notes,
   };
