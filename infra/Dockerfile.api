@@ -20,6 +20,8 @@ FROM base AS build
 RUN apt-get update && apt-get install -y --no-install-recommends python3 make g++ openssl \
   && rm -rf /var/lib/apt/lists/*
 COPY --from=prune /app/out/json/ .
+# The API's postinstall runs `prisma generate`, which needs the schema before install.
+COPY --from=prune /app/out/full/apps/api/prisma ./apps/api/prisma
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --frozen-lockfile
 COPY --from=prune /app/out/full/ .
 RUN pnpm --filter api exec prisma generate \
