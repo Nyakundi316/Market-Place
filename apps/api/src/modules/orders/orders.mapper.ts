@@ -13,6 +13,7 @@ import { dealListing, dealParty, toDealListing, toParty } from '../offers/offers
 export const orderInclude = {
   listing: dealListing,
   offer: { select: { conversationId: true } },
+  escrow: { select: { status: true, releaseScheduledAt: true } },
   buyer: dealParty,
   seller: dealParty,
 } satisfies Prisma.OrderInclude;
@@ -62,6 +63,14 @@ export function toOrderListItem(o: OrderRow, viewerId: string, disputeDays = 7):
     updatedAt: o.updatedAt.toISOString(),
     paymentDueAt: o.status === 'awaiting_payment' ? paymentDueAt(o.createdAt).toISOString() : null,
     actions: actionsFor(o, side, disputeDays),
+    escrow: o.escrow && {
+      status: o.escrow.status,
+      autoReleaseAt:
+        o.escrow.status === 'held' && o.status === 'delivered'
+          ? (o.escrow.releaseScheduledAt?.toISOString() ?? null)
+          : null,
+      awaitingPayoutDetails: o.escrow.status === 'held' && o.status === 'completed',
+    },
   };
 }
 

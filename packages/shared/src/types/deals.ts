@@ -83,6 +83,13 @@ export interface OrderDto {
   updatedAt: string;
   /** Unpaid orders auto-cancel at this time. */
   paymentDueAt: string | null;
+  escrow: {
+    status: 'held' | 'released' | 'refunded' | 'partially_refunded' | 'disputed';
+    /** Released automatically at this time unless the buyer acts first. */
+    autoReleaseAt: string | null;
+    /** Completed but the seller has no payout account yet. */
+    awaitingPayoutDetails: boolean;
+  } | null;
   actions: OrderAction[];
 }
 
