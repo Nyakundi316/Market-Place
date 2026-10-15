@@ -137,3 +137,76 @@ export async function uploadPng(
   if (!put.ok) throw new Error(`PUT failed: ${put.status}`);
   return signed.body.publicUrl as string;
 }
+
+/**
+ * A finished deal straight in the DB (listing → chat → accepted offer →
+ * order in `status`), for suites that need one without the whole flow.
+ */
+export async function seedOrder(
+  app: INestApplication,
+  buyer: TestUser,
+  seller: TestUser,
+  status: 'awaiting_payment' | 'in_escrow' | 'completed' = 'completed',
+) {
+  const db = app.get(PrismaService);
+  const tag = Math.random().toString(36).slice(2, 9);
+  const category = await db.category.upsert({
+    where: { slug: 'seeded-orders' },
+    create: { name: 'Seeded orders', slug: 'seeded-orders' },
+    update: {},
+  });
+  const listing = await db.listing.create({
+    data: {
+      sellerId: seller.id,
+      categoryId: category.id,
+      type: 'product',
+      title: `Seeded item ${tag}`,
+      slug: `seeded-${tag}`,
+      description: 'A listing created directly for a test, never shown to users.',
+      price: 1000,
+      currency: 'KES',
+      status: 'active',
+      publishedAt: new Date(),
+    },
+  });
+  const conversation = await db.conversation.create({
+    data: {
+      listingId: listing.id,
+      buyerId: buyer.id,
+      sellerId: seller.id,
+      lastMessageAt: new Date(),
+    },
+  });
+  const offer = await db.offer.create({
+    data: {
+      conversationId: conversation.id,
+      listingId: listing.id,
+      fromUserId: buyer.id,
+      toUserId: seller.id,
+      unitPrice: 1000,
+      totalPrice: 1000,
+      currency: 'KES',
+      status: 'accepted',
+    },
+  });
+  const done = status === 'completed' ? new Date() : null;
+  const order = await db.order.create({
+    data: {
+      orderNumber: `ORD-TEST-${tag}`,
+      listingId: listing.id,
+      offerId: offer.id,
+      buyerId: buyer.id,
+      sellerId: seller.id,
+      quantity: 1,
+      unitPrice: 1000,
+      subtotal: 1000,
+      platformFee: 20,
+      total: 1000,
+      currency: 'KES',
+      status,
+      deliveredAt: done,
+      completedAt: done,
+    },
+  });
+  return { order, listing, conversation };
+}

@@ -83,6 +83,8 @@ export interface OrderDto {
   updatedAt: string;
   /** Unpaid orders auto-cancel at this time. */
   paymentDueAt: string | null;
+  /** The buyer's review of this order, once written. */
+  review: { rating: number; comment: string | null } | null;
   escrow: {
     status: 'held' | 'released' | 'refunded' | 'partially_refunded' | 'disputed';
     /** Released automatically at this time unless the buyer acts first. */

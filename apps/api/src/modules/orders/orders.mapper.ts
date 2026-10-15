@@ -14,6 +14,7 @@ export const orderInclude = {
   listing: dealListing,
   offer: { select: { conversationId: true } },
   escrow: { select: { status: true, releaseScheduledAt: true } },
+  review: { select: { rating: true, comment: true } },
   buyer: dealParty,
   seller: dealParty,
 } satisfies Prisma.OrderInclude;
@@ -63,6 +64,7 @@ export function toOrderListItem(o: OrderRow, viewerId: string, disputeDays = 7):
     updatedAt: o.updatedAt.toISOString(),
     paymentDueAt: o.status === 'awaiting_payment' ? paymentDueAt(o.createdAt).toISOString() : null,
     actions: actionsFor(o, side, disputeDays),
+    review: o.review,
     escrow: o.escrow && {
       status: o.escrow.status,
       autoReleaseAt:
