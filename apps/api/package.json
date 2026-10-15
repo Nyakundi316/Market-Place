@@ -15,6 +15,7 @@
     "db:deploy": "dotenv -e ../../.env -- prisma migrate deploy",
     "db:reset": "dotenv -e ../../.env -- prisma migrate reset",
     "db:seed": "dotenv -e ../../.env -- prisma db seed",
+    "seed:load": "dotenv -e ../../.env -- tsx prisma/seed-load.ts",
     "pretest:e2e": "dotenv -v DATABASE_URL=postgresql://markethub:markethub@localhost:5432/markethub_test?schema=public -- prisma migrate deploy",
     "postinstall": "prisma generate"
   },
