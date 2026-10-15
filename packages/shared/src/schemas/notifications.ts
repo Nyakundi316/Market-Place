@@ -21,6 +21,12 @@ export const NOTIFICATION_TYPES = [
   'dispute.resolved',
   'payout.sent',
   'payout.setup_needed',
+  'review.received',
+  'verification.approved',
+  'verification.rejected',
+  'moderation.warning',
+  'moderation.listing_removed',
+  'report.resolved',
 ] as const;
 export type NotificationType = (typeof NOTIFICATION_TYPES)[number];
 

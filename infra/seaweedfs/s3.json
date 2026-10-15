@@ -5,6 +5,6 @@
       "credentials": [{ "accessKey": "markethub", "secretKey": "markethub-dev-secret" }],
       "actions": ["Admin", "Read", "List", "Tagging", "Write"]
     },
-    { "name": "anonymous", "actions": ["Read"] }
+    { "name": "anonymous", "actions": ["Read:markethub"] }
   ]
 }

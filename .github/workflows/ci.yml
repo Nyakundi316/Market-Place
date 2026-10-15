@@ -79,6 +79,8 @@ jobs:
               | grep -q 'created bucket' && break
             sleep 2
           done
+          # ID/business documents (Phase 6 verification): no anonymous read.
+          echo 's3.bucket.create -name markethub-private' | docker exec -i s3 weed shell -master=127.0.0.1:9333
 
       - name: API e2e (migrates the test DB first)
         run: pnpm test:e2e --filter api

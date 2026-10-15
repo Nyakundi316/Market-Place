@@ -43,6 +43,8 @@ const base = z.object({
   // Documented extra: where uploaded objects are read from (CDN / R2 public domain).
   // Defaults to path-style ${S3_ENDPOINT}/${S3_BUCKET}, which is what MinIO serves.
   S3_PUBLIC_URL: optional.pipe(z.string().url().optional()),
+  // Documented extra: verification documents live here, never publicly readable.
+  S3_PRIVATE_BUCKET: optional,
 
   STRIPE_SECRET_KEY: optional,
   STRIPE_WEBHOOK_SECRET: optional,
@@ -69,6 +71,7 @@ const REQUIRED_IN_PROD = [
   'S3_BUCKET',
   'S3_ACCESS_KEY',
   'S3_SECRET_KEY',
+  'S3_PRIVATE_BUCKET',
   'STRIPE_SECRET_KEY',
   'STRIPE_WEBHOOK_SECRET',
   'STRIPE_PUBLISHABLE_KEY',

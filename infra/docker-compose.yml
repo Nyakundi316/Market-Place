@@ -51,14 +51,21 @@ services:
       timeout: 3s
       retries: 20
 
-  # One-shot: create the bucket.
+  # One-shot: create the buckets. markethub-private (verification documents)
+  # gets no anonymous read — see infra/seaweedfs/s3.json.
   s3-init:
     image: chrislusf/seaweedfs:3.97
     depends_on:
       seaweedfs:
         condition: service_healthy
+    # The master is healthy before the filer is; retry until the shell can reach it.
     entrypoint: >
-      sh -c "echo 's3.bucket.create -name markethub' | weed shell -master=seaweedfs:9333"
+      sh -c "for b in markethub markethub-private; do
+               for i in $$(seq 1 30); do
+                 echo \"s3.bucket.create -name $$b\" | weed shell -master=seaweedfs:9333 2>&1 | grep -qE 'created bucket|already exists' && break;
+                 sleep 2;
+               done;
+             done"
 
 volumes:
   pgdata:

@@ -122,21 +122,23 @@ model User {
   followers     Follow[]       @relation("following")
   favorites     Favorite[]
 
-  buyerConversations  Conversation[] @relation("conversationBuyer")
-  sellerConversations Conversation[] @relation("conversationSeller")
+  buyerConversations  Conversation[]        @relation("conversationBuyer")
+  sellerConversations Conversation[]        @relation("conversationSeller")
   messages            Message[]
-  offersSent          Offer[]        @relation("offerFrom")
-  offersReceived      Offer[]        @relation("offerTo")
-  purchases           Order[]        @relation("orderBuyer")
-  sales               Order[]        @relation("orderSeller")
+  offersSent          Offer[]               @relation("offerFrom")
+  offersReceived      Offer[]               @relation("offerTo")
+  purchases           Order[]               @relation("orderBuyer")
+  sales               Order[]               @relation("orderSeller")
   transactions        Transaction[]
   payoutAccounts      PayoutAccount[]
-  reviewsGiven        Review[]       @relation("reviewRater")
-  reviewsReceived     Review[]       @relation("reviewRatee")
+  verifications       VerificationRequest[] @relation("verificationSubject")
+  verificationReviews VerificationRequest[] @relation("verificationReviewer")
+  reviewsGiven        Review[]              @relation("reviewRater")
+  reviewsReceived     Review[]              @relation("reviewRatee")
   notifications       Notification[]
   auditLogs           AuditLog[]
-  reportsFiled        Report[]       @relation("reportReporter")
-  reportsResolved     Report[]       @relation("reportResolver")
+  reportsFiled        Report[]              @relation("reportReporter")
+  reportsResolved     Report[]              @relation("reportResolver")
 
   @@map("users")
 }
@@ -660,4 +662,40 @@ model PayoutAccount {
   @@unique([userId, gateway])
   @@unique([gateway, accountRef])
   @@map("payout_accounts")
+}
+
+// ─── Trust (Phase 6, documented extra) ──────────────────────────────────────
+
+enum VerificationKind {
+  id
+  business
+}
+
+enum VerificationStatus {
+  pending
+  approved
+  rejected
+}
+
+/// An ID or business check a user asks for; an admin approves or rejects it
+/// (§4 POST /admin/verify/:userId). Documents are keys in the private bucket.
+model VerificationRequest {
+  id         String             @id @default(uuid()) @db.Uuid
+  userId     String             @map("user_id") @db.Uuid
+  kind       VerificationKind
+  status     VerificationStatus @default(pending)
+  documents  Json // string[] of private object keys
+  details    Json               @default("{}")
+  note       String? // shown to the user when rejected
+  reviewedBy String?            @map("reviewed_by") @db.Uuid
+  reviewedAt DateTime?          @map("reviewed_at")
+  createdAt  DateTime           @default(now()) @map("created_at")
+  updatedAt  DateTime           @updatedAt @map("updated_at")
+
+  user     User  @relation("verificationSubject", fields: [userId], references: [id], onDelete: Restrict)
+  reviewer User? @relation("verificationReviewer", fields: [reviewedBy], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([userId, kind])
+  @@map("verification_requests")
 }
