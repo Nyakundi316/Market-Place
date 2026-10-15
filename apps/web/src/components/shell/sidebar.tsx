@@ -10,6 +10,7 @@ import { AccountMenu } from './account-menu';
 import { NotificationBell } from './notification-bell';
 import { isActive, NAV } from './nav-items';
 import { Wordmark } from './wordmark';
+import { t } from '@/i18n';
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -22,11 +23,11 @@ export function Sidebar() {
 
       <Button asChild className="mx-1 mt-7 justify-start gap-2 shadow-lift">
         <Link href="/create">
-          <Plus className="size-4" /> Sell something
+          <Plus className="size-4" /> {t('nav.sellSomething')}
         </Link>
       </Button>
 
-      <nav aria-label="Main" className="mt-6 flex flex-col gap-0.5">
+      <nav aria-label={t('nav.main')} className="mt-6 flex flex-col gap-0.5">
         {NAV.filter((n) => !n.primary).map(({ href, label, icon: Icon }) => {
           const active = isActive(pathname, href);
           return (

@@ -4,6 +4,7 @@ import { BottomNav } from '@/components/shell/bottom-nav';
 import { NotificationBell } from '@/components/shell/notification-bell';
 import { Sidebar } from '@/components/shell/sidebar';
 import { Wordmark } from '@/components/shell/wordmark';
+import { t } from '@/i18n';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -12,7 +13,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         href="#main"
         className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-md focus:bg-card focus:px-3 focus:py-2 focus:shadow-lift"
       >
-        Skip to content
+        {t('nav.skipToContent')}
       </a>
       <Sidebar />
 

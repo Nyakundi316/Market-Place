@@ -5,12 +5,13 @@ import { usePathname } from 'next/navigation';
 import { UnreadCount } from '@/components/chat/unread-count';
 import { cn } from '@/lib/utils';
 import { isActive, NAV } from './nav-items';
+import { t } from '@/i18n';
 
 export function BottomNav() {
   const pathname = usePathname();
   return (
     <nav
-      aria-label="Main"
+      aria-label={t('nav.main')}
       className="pb-safe fixed inset-x-0 bottom-0 z-40 border-t bg-card/95 backdrop-blur lg:hidden"
     >
       <ul className="grid h-16 grid-cols-5">

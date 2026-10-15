@@ -1,4 +1,5 @@
 import { Compass, Handshake, MessageCircle, Plus, Search, type LucideIcon } from 'lucide-react';
+import { t } from '@/i18n';
 
 export interface NavItem {
   href: string;
@@ -9,11 +10,11 @@ export interface NavItem {
 }
 
 export const NAV: NavItem[] = [
-  { href: '/feed', label: 'Discover', icon: Compass },
-  { href: '/search', label: 'Search', icon: Search },
-  { href: '/create', label: 'Sell', icon: Plus, primary: true },
-  { href: '/chat', label: 'Chats', icon: MessageCircle },
-  { href: '/deals', label: 'Deals', icon: Handshake },
+  { href: '/feed', label: t('nav.discover'), icon: Compass },
+  { href: '/search', label: t('nav.search'), icon: Search },
+  { href: '/create', label: t('nav.sell'), icon: Plus, primary: true },
+  { href: '/chat', label: t('nav.chats'), icon: MessageCircle },
+  { href: '/deals', label: t('nav.deals'), icon: Handshake },
 ];
 
 export const isActive = (pathname: string, href: string) =>

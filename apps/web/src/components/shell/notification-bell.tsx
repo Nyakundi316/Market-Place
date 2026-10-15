@@ -15,6 +15,7 @@ import { unreadNotifications, useMarkNotificationRead, useNotifications } from '
 import { timeAgo } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/stores/auth';
+import { t } from '@/i18n';
 
 const iconFor = (type: NotificationDto['type']) =>
   type.startsWith('order.') ? Package : type.startsWith('offer.') ? Handshake : MessageCircle;
@@ -35,7 +36,9 @@ export function NotificationBell({ className }: { className?: string }) {
         <Button
           variant="ghost"
           size="icon"
-          aria-label={unread ? `Notifications, ${unread} unread` : 'Notifications'}
+          aria-label={
+            unread ? t('notifications.unread', { count: unread }) : t('notifications.title')
+          }
           className={cn('relative rounded-full', className)}
         >
           <Bell className="size-[18px]" />
@@ -52,14 +55,14 @@ export function NotificationBell({ className }: { className?: string }) {
         className="w-[min(22rem,calc(100vw-2rem))] p-0"
       >
         <div className="flex items-center justify-between border-b px-3 py-2.5">
-          <p className="text-sm font-semibold">Notifications</p>
+          <p className="text-sm font-semibold">{t('notifications.title')}</p>
           {unread > 0 && (
             <button
               type="button"
               onClick={() => mark.mutate('all')}
               className="text-xs font-medium text-primary hover:underline"
             >
-              Mark all read
+              {t('notifications.markAllRead')}
             </button>
           )}
         </div>
@@ -71,7 +74,7 @@ export function NotificationBell({ className }: { className?: string }) {
             </div>
           ) : items.length === 0 ? (
             <p className="px-3 py-8 text-center text-sm text-muted-foreground">
-              You&apos;re all caught up.
+              {t('notifications.empty')}
             </p>
           ) : (
             items.map((n) => {
@@ -121,7 +124,7 @@ export function NotificationBell({ className }: { className?: string }) {
               onClick={() => void q.fetchNextPage()}
               className="w-full py-2 text-xs text-muted-foreground hover:text-foreground"
             >
-              Show older
+              {t('notifications.older')}
             </button>
           )}
         </div>

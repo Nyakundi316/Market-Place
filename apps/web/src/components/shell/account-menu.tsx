@@ -18,6 +18,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useMe } from '@/hooks/use-me';
 import { logout } from '@/lib/api';
 import { useAuth } from '@/stores/auth';
+import { t } from '@/i18n';
 
 /** `compact` = mobile top bar (avatar only); otherwise the sidebar footer row. */
 export function AccountMenu({ compact = false }: { compact?: boolean }) {
@@ -33,10 +34,10 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
     return (
       <div className={compact ? 'flex gap-1.5' : 'grid grid-cols-2 gap-2'}>
         <Button asChild variant="ghost" size="sm">
-          <Link href="/login">Log in</Link>
+          <Link href="/login">{t('account.logIn')}</Link>
         </Button>
         <Button asChild size="sm">
-          <Link href="/signup">Sign up</Link>
+          <Link href="/signup">{t('account.signUp')}</Link>
         </Button>
       </div>
     );
@@ -78,34 +79,34 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           <Link href={profileHref}>
-            <UserRound /> {me?.profile ? 'Profile' : 'Set up profile'}
+            <UserRound /> {me?.profile ? t('account.profile') : t('account.setUpProfile')}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/seller">
-            <LayoutList /> Your listings
+            <LayoutList /> {t('account.listings')}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/saved">
-            <Heart /> Saved
+            <Heart /> {t('account.saved')}
           </Link>
         </DropdownMenuItem>
         <DropdownMenuItem asChild>
           <Link href="/settings">
-            <Settings /> Settings
+            <Settings /> {t('account.settings')}
           </Link>
         </DropdownMenuItem>
         {me?.user.role === 'admin' && (
           <DropdownMenuItem asChild>
             <Link href="/admin">
-              <ShieldCheck /> Admin
+              <ShieldCheck /> {t('account.admin')}
             </Link>
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
         <DropdownMenuItem onSelect={signOut}>
-          <LogOut /> Log out
+          <LogOut /> {t('account.logOut')}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
