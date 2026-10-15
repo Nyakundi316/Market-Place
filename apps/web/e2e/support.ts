@@ -1,4 +1,6 @@
+import { readFileSync } from 'node:fs';
 import { connect } from 'node:net';
+import { resolve } from 'node:path';
 import { test as base, expect, type Page } from '@playwright/test';
 
 const REDIS = new URL(
@@ -111,4 +113,30 @@ export async function createProfile(
   await page.getByRole('button', { name: 'Continue' }).click();
   await expect(page.getByRole('heading', { name: 'Where do you trade?' })).toBeVisible();
   return username;
+}
+
+/**
+ * The seeded admin. CI passes E2E_ADMIN_*; locally it's whatever `pnpm db:seed`
+ * used, read from the root .env.
+ */
+export function adminCredentials() {
+  if (process.env.E2E_ADMIN_EMAIL && process.env.E2E_ADMIN_PASSWORD) {
+    return { email: process.env.E2E_ADMIN_EMAIL, password: process.env.E2E_ADMIN_PASSWORD };
+  }
+  const env = Object.fromEntries(
+    readFileSync(resolve(__dirname, '../../../.env'), 'utf8')
+      .split(/\r?\n/)
+      .map((line) => /^([A-Z_]+)=(.*)$/.exec(line))
+      .filter((m): m is RegExpExecArray => !!m)
+      .map((m) => [m[1], m[2]]),
+  );
+  return { email: env.SEED_ADMIN_EMAIL!, password: env.SEED_ADMIN_PASSWORD! };
+}
+
+export async function logIn(page: Page, email: string, password: string) {
+  await page.goto('/login');
+  await page.getByLabel('Email').fill(email);
+  await page.getByLabel('Password', { exact: true }).fill(password);
+  await page.getByRole('button', { name: 'Log in' }).click();
+  await expect(page).not.toHaveURL(/\/login/, { timeout: 15_000 });
 }

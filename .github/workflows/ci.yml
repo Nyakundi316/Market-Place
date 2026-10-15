@@ -20,6 +20,7 @@ env:
   JWT_REFRESH_SECRET: ci-refresh-secret-0123456789abcdefghijklmnop
   S3_ENDPOINT: http://localhost:8333
   S3_BUCKET: markethub
+  S3_PRIVATE_BUCKET: markethub-private
   S3_ACCESS_KEY: markethub
   S3_SECRET_KEY: markethub-dev-secret
   S3_REGION: us-east-1
@@ -90,6 +91,14 @@ jobs:
         env:
           API_URL: http://localhost:3001
 
+      # The admin E2E signs in as the seeded admin (test-only credentials).
+      - name: Seed categories and admin
+        working-directory: apps/api
+        run: pnpm exec prisma db seed
+        env:
+          SEED_ADMIN_EMAIL: admin@markethub.local
+          SEED_ADMIN_PASSWORD: ci-admin-password-0123
+
       - name: Install Chromium
         working-directory: apps/web
         run: pnpm exec playwright install --with-deps chromium
@@ -100,6 +109,8 @@ jobs:
         env:
           CI: 'true'
           E2E_REDIS_URL: redis://localhost:6379/1
+          E2E_ADMIN_EMAIL: admin@markethub.local
+          E2E_ADMIN_PASSWORD: ci-admin-password-0123
 
       - uses: actions/upload-artifact@v4
         if: failure()
