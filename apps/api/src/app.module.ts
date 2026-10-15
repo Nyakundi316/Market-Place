@@ -11,6 +11,7 @@ import { RateLimitGuard } from './common/rate-limit/rate-limit.guard';
 import { RateLimitService } from './common/rate-limit/rate-limit.service';
 import { EnvModule, loadEnv } from './config/env.validation';
 import { HealthController } from './health/health.controller';
+import { AdminModule } from './modules/admin/admin.module';
 import { AuditModule } from './modules/audit/audit.service';
 import { AuthModule } from './modules/auth/auth.module';
 import { CategoriesModule } from './modules/categories/categories.module';
@@ -51,6 +52,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     PaymentsModule,
     ReviewsModule,
     VerificationModule,
+    AdminModule,
     LoggerModule.forRootAsync({
       useFactory: () => {
         const env = loadEnv();

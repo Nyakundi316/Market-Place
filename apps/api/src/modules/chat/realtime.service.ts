@@ -59,6 +59,11 @@ export class RealtimeService implements OnModuleDestroy {
       .emit('presence:update', { userId, status });
   }
 
+  /** Drops a user's live sockets everywhere (a ban); the handshake refuses them after. */
+  disconnectUser(userId: string) {
+    this.server?.in(userRoom(userId)).disconnectSockets(true);
+  }
+
   /** Puts every live socket of these users into a conversation room. */
   joinConversation(conversationId: string, userIds: string[]) {
     this.server?.in(userIds.map(userRoom)).socketsJoin(convRoom(conversationId));
