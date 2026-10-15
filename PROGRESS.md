@@ -129,6 +129,9 @@ Fixes found on the way:
 
 Tests: shared 68 · api unit 25 · api e2e 220 · web unit 29 · Playwright 34 (33 first try, 1 passed on retry — the known-flaky live chat test) · images build in CI
 
+## Shipped — post Phase 7
+- **§8 `listing:expire`**: hourly BullMQ scheduler (`:07` UTC) flips `active` listings past `expiresAt` to `expired`, unfeatures them, recomputes `Profile.listingsCount`, and sends one `listing.expired` notification per seller linking to `/seller?tab=expired` (renew = publish again). Idempotent via the status guard; search already hid them at the deadline.
+
 ## Before launch (everything)
 - Real secrets for Stripe/Paystack (see below), `INTERNAL_API_KEY`, R2 buckets, Resend domain, `WEB_URL`/`API_URL`
 - Fly account + `FLY_API_TOKEN` secret and `API_URL`/`WEB_URL` repo variables for the Deploy workflow

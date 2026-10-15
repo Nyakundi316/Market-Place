@@ -22,6 +22,7 @@ export const NOTIFICATION_TYPES = [
   'payout.sent',
   'payout.setup_needed',
   'review.received',
+  'listing.expired',
   'verification.approved',
   'verification.rejected',
   'moderation.warning',

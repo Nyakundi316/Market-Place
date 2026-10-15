@@ -7,7 +7,7 @@ For whoever is on call. Commands assume the repo root and a logged-in `flyctl`.
 | Piece | Where | Notes |
 | --- | --- | --- |
 | `markethub-web` | Fly.io, `jnb`, ≥1 machine | Next.js standalone. Talks to the API over Fly's private network (`API_INTERNAL_URL`). |
-| `markethub-api` | Fly.io, `jnb`, 2 always-on machines | NestJS + Socket.IO + BullMQ workers **in the same process**. Never scale to 0: payouts, offer expiry, unpaid-order cancels and reconciliation run here. |
+| `markethub-api` | Fly.io, `jnb`, 2 always-on machines | NestJS + Socket.IO + BullMQ workers **in the same process**. Never scale to 0: payouts, offer and listing expiry, unpaid-order cancels and reconciliation run here. |
 | Postgres 16 | managed (Fly Postgres / Neon / RDS) | Source of truth (§0). Point-in-time recovery on. |
 | Redis 7 | managed (Upstash / Fly) | Cache, rate limits, presence, Socket.IO adapter, BullMQ. Losing it loses queued jobs, not money (see §6). |
 | Object storage | Cloudflare R2 (S3 API) | `S3_BUCKET` public (custom domain → `S3_PUBLIC_URL`); `S3_PRIVATE_BUCKET` **no public access** (ID documents). |

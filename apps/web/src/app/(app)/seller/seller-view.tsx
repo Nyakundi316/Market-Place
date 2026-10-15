@@ -5,6 +5,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { Heart, ImageOff, Plus } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { useState } from 'react';
 import { OwnerActions } from '@/components/listings/owner-actions';
 import { Button } from '@/components/ui/button';
@@ -75,7 +76,11 @@ function Row({ l }: { l: ListingCardDto }) {
 export function SellerView() {
   const ready = useRequireAuth();
   const { data: me } = useMe();
-  const [tab, setTab] = useState<ListingStatus>('active');
+  // ?tab=expired from the "your listings expired" notification.
+  const linked = useSearchParams().get('tab');
+  const [tab, setTab] = useState<ListingStatus>(
+    TABS.some((t) => t.status === linked) ? (linked as ListingStatus) : 'active',
+  );
   const q = useInfiniteQuery({
     queryKey: ['listings', 'mine', tab],
     queryFn: ({ pageParam }) =>

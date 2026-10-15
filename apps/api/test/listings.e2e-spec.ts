@@ -1,5 +1,6 @@
 import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
+import { ListingExpiry } from '../src/modules/listings/listing-expiry';
 import { PrismaService } from '../src/prisma/prisma.module';
 import { createApp, makeUser, resetRateLimits, type TestUser, uploadPng } from './helpers';
 
@@ -429,6 +430,50 @@ describe('Listings (e2e)', () => {
         .set('Authorization', seller.auth)
         .send({})
         .expect(409);
+    });
+  });
+
+  describe('listing:expire job', () => {
+    it('expires lapsed listings once, fixes the live count and nudges the seller', async () => {
+      const job = app.get(ListingExpiry);
+      const [a, b] = [await live(seller), await live(seller)];
+      const keep = await live(seller);
+      await db.listing.updateMany({
+        where: { id: { in: [a.id, b.id] } },
+        data: { expiresAt: new Date(Date.now() - 1000), isFeatured: true },
+      });
+
+      expect(await job.run()).toBeGreaterThanOrEqual(2);
+      const rows = await db.listing.findMany({ where: { sellerId: seller.id } });
+      const byId = new Map(rows.map((r) => [r.id, r]));
+      expect(byId.get(a.id)).toMatchObject({ status: 'expired', isFeatured: false });
+      expect(byId.get(b.id)?.status).toBe('expired');
+      expect(byId.get(keep.id)?.status).toBe('active');
+      const profile = await db.profile.findUniqueOrThrow({ where: { userId: seller.id } });
+      expect(profile.listingsCount).toBe(1);
+
+      const notes = await db.notification.findMany({
+        where: { userId: seller.id, type: 'listing.expired' },
+      });
+      expect(notes).toHaveLength(1);
+      expect(notes[0]).toMatchObject({
+        title: '2 of your listings have expired',
+        link: '/seller?tab=expired',
+      });
+
+      // Second pass finds nothing for this seller — no duplicate nudge.
+      await job.run();
+      expect(
+        await db.notification.count({ where: { userId: seller.id, type: 'listing.expired' } }),
+      ).toBe(1);
+
+      // Renewing is just publishing again.
+      const renewed = await http()
+        .post(`/listings/${a.id}/publish`)
+        .set('Authorization', seller.auth)
+        .expect(200);
+      expect(renewed.body.status).toBe('active');
+      expect(Date.parse(renewed.body.expiresAt)).toBeGreaterThan(Date.now());
     });
   });
 
