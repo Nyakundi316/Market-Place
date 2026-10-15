@@ -5,11 +5,12 @@ import { EscrowService } from './escrow.service';
 import { PaymentsController, WebhooksController } from './payments.controller';
 import { PaymentsService } from './payments.service';
 import { Gateways } from './providers/gateways';
+import { ReconciliationService } from './reconciliation.service';
 
 @Module({
   imports: [NotificationsModule],
   controllers: [PaymentsController, WebhooksController],
-  providers: [Gateways, PaymentsService, EscrowService, DisputesQuery],
+  providers: [Gateways, PaymentsService, EscrowService, DisputesQuery, ReconciliationService],
   exports: [EscrowService, Gateways],
 })
 export class PaymentsModule {}

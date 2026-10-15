@@ -2,6 +2,9 @@ import type { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { EscrowService } from '../src/modules/payments/escrow.service';
 import { Gateways } from '../src/modules/payments/providers/gateways';
+import { ReconciliationService } from '../src/modules/payments/reconciliation.service';
+import { REDIS } from '../src/redis/redis.module';
+import type Redis from 'ioredis';
 import { SANDBOX_CARDS } from '../src/modules/payments/providers/sandbox.provider';
 import { PrismaService } from '../src/prisma/prisma.module';
 import { createApp, makeUser, resetRateLimits, type TestUser } from './helpers';
@@ -459,6 +462,71 @@ describe('Payments & escrow (e2e)', () => {
         .get('/payments/banks?currency=USD')
         .set('Authorization', seller.auth)
         .expect(400);
+    });
+  });
+
+  describe('reconciliation', () => {
+    const backdate = (orderId: string) =>
+      db.transaction.updateMany({
+        where: { orderId, type: 'charge' },
+        data: { createdAt: new Date(Date.now() - 20 * 60_000) },
+      });
+
+    it('recovers a payment whose webhook never arrived, exactly once', async () => {
+      const orderId = await placeOrder();
+      const session = await pay(buyer, orderId).expect(200);
+      await gateways.sandbox.pay(session.body.clientSecret, SANDBOX_CARDS.ok); // webhook "lost"
+      await backdate(orderId);
+
+      const recon = app.get(ReconciliationService);
+      const report = await recon.run();
+      const txn = await db.transaction.findFirstOrThrow({ where: { orderId, type: 'charge' } });
+      expect(report.recovered).toContain(txn.id);
+      expect((await db.order.findUniqueOrThrow({ where: { id: orderId } })).status).toBe(
+        'in_escrow',
+      );
+
+      const again = await recon.run();
+      expect(again.recovered).not.toContain(txn.id);
+      expect(await db.escrowHold.count({ where: { orderId } })).toBe(1);
+    });
+
+    it('closes abandoned charges and alerts admins about ledger mismatches', async () => {
+      const admin = await makeUser(app, { role: 'admin' });
+      const abandoned = await placeOrder();
+      const s1 = await pay(buyer, abandoned).expect(200);
+      await gateways.sandbox.pay(s1.body.clientSecret, SANDBOX_CARDS.declined);
+      await backdate(abandoned);
+
+      // A paid order the gateway now reports for a different amount.
+      await db.listing.update({ where: { id: listingId }, data: { stock: 2, status: 'active' } });
+      const paid = await paidOrder();
+      const charge = await db.transaction.findFirstOrThrow({
+        where: { orderId: paid, type: 'charge', status: 'succeeded' },
+      });
+      const redis = app.get<Redis>(REDIS);
+      const key = `sandbox:charge:${charge.gatewayRef}`;
+      await redis.set(
+        key,
+        JSON.stringify({ ...JSON.parse((await redis.get(key))!), amount: '4300.00' }),
+      );
+
+      const report = await app.get(ReconciliationService).run();
+      const failedTxn = await db.transaction.findFirstOrThrow({
+        where: { orderId: abandoned, type: 'charge' },
+      });
+      expect(report.failed).toContain(failedTxn.id);
+      expect(failedTxn.status).toBe('failed');
+      expect(report.mismatches).toContainEqual({
+        txnId: charge.id,
+        ours: '43000.00 KES succeeded',
+        theirs: '4300.00 KES succeeded',
+      });
+      expect(
+        await db.auditLog.count({ where: { action: 'reconcile.mismatch', entityId: charge.id } }),
+      ).toBe(1);
+      const alert = await db.notification.findFirstOrThrow({ where: { userId: admin.id } });
+      expect(alert.title).toMatch(/Reconciliation/);
     });
   });
 });

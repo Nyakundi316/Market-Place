@@ -192,6 +192,15 @@ export class PaymentsService {
       throw err;
     }
 
+    const applied = await this.applyOnce(gateway, event);
+    return { received: true, duplicate: !applied };
+  }
+
+  /**
+   * Applies an already-trusted event exactly once (webhook after its
+   * signature check, or reconciliation's recovery of a missed one).
+   */
+  async applyOnce(gateway: GatewayName, event: GatewayEvent): Promise<boolean> {
     const after: (() => Promise<void>)[] = [];
     const applied = await this.db.$transaction(async (tx) => {
       const inserted = await tx.$executeRaw`
@@ -212,7 +221,7 @@ export class PaymentsService {
     // Side effects only once the money state is committed.
     for (const fn of after)
       await fn().catch((err: unknown) => this.logger.error({ err }, 'post-webhook step failed'));
-    return { received: true, duplicate: !applied };
+    return applied;
   }
 
   private async apply(
