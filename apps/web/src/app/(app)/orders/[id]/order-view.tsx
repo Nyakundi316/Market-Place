@@ -7,10 +7,11 @@ import {
   type OrderStatus,
   toCents,
 } from '@markethub/shared';
-import { ArrowLeft, Check, Loader2, MessageCircle, Package, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Check, Loader2, Lock, MessageCircle, Package, ShieldCheck } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { ORDER_STATUS_LABEL, StatusPill } from '@/components/deals/status-pill';
 import { ProfileAvatar } from '@/components/profile-avatar';
@@ -27,7 +28,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Textarea } from '@/components/ui/textarea';
-import { useOrder, useOrderAction } from '@/hooks/use-deals';
+import { PaymentDialog } from '@/components/deals/payment-dialog';
+import { useEscrowAction, useOrder, useOrderAction } from '@/hooks/use-deals';
 import { useRequireAuth } from '@/hooks/use-require-auth';
 import { ApiError } from '@/lib/api';
 import { countryName } from '@/lib/countries';
@@ -119,12 +121,21 @@ function OrderTimeline({ o }: { o: OrderDto }) {
   );
 }
 
-type StatusAction = Extract<OrderAction, 'cancel' | 'ship' | 'deliver' | 'confirm-delivery'>;
-const isStatusAction = (a: OrderAction): a is StatusAction => a in CONFIRM;
+type DialogAction = Exclude<OrderAction, 'pay'>;
+type StatusAction = Exclude<DialogAction, 'dispute' | 'refund'>;
+const isDialogAction = (a: OrderAction): a is DialogAction => a in CONFIRM;
 
 const CONFIRM: Record<
-  StatusAction,
-  { button: string; title: string; body: string; done: string; field?: 'tracking' | 'reason' }
+  DialogAction,
+  {
+    button: string;
+    title: string;
+    body: string;
+    done: string;
+    field?: 'tracking' | 'reason';
+    /** Minimum length when the field is required. */
+    required?: number;
+  }
 > = {
   ship: {
     button: 'Mark as shipped',
@@ -152,6 +163,21 @@ const CONFIRM: Record<
     done: 'Order cancelled',
     field: 'reason',
   },
+  dispute: {
+    button: 'Open a dispute',
+    title: 'Something wrong with this order?',
+    body: 'Payment stays frozen while our team looks at it. Describe what happened — photos and messages in the chat help.',
+    done: 'Dispute opened — we’ll be in touch',
+    field: 'reason',
+    required: 10,
+  },
+  refund: {
+    button: 'Cancel and refund',
+    title: 'Cancel and refund the buyer?',
+    body: 'The buyer gets the full amount back and the item goes back on sale.',
+    done: 'Refunded',
+    field: 'reason',
+  },
 };
 
 function ActionDialog({
@@ -160,36 +186,36 @@ function ActionDialog({
   onClose,
 }: {
   order: OrderDto;
-  action: StatusAction | null;
+  action: DialogAction | null;
   onClose: () => void;
 }) {
   const run = useOrderAction(order.id);
+  const escrow = useEscrowAction(order.id);
+  const pending = run.isPending || escrow.isPending;
   const [text, setText] = useState('');
   const copy = action ? CONFIRM[action] : null;
 
   const submit = () => {
     if (!action) return;
     const value = text.trim() || undefined;
-    run.mutate(
-      {
-        action,
-        body:
-          copy?.field === 'tracking'
-            ? { trackingNumber: value }
-            : copy?.field === 'reason'
-              ? { reason: value }
-              : {},
+    const body =
+      copy?.field === 'tracking'
+        ? { trackingNumber: value }
+        : copy?.field === 'reason'
+          ? { reason: value }
+          : {};
+    const handlers = {
+      onSuccess: () => {
+        toast.success(copy!.done);
+        setText('');
+        onClose();
       },
-      {
-        onSuccess: () => {
-          toast.success(copy!.done);
-          setText('');
-          onClose();
-        },
-        onError: (err) => toast.error(err instanceof ApiError ? err.message : 'Try again'),
-      },
-    );
+      onError: (err: unknown) => toast.error(err instanceof ApiError ? err.message : 'Try again'),
+    };
+    if (action === 'dispute' || action === 'refund') escrow.mutate({ action, body }, handlers);
+    else run.mutate({ action: action as StatusAction, body }, handlers);
   };
+  const tooShort = !!copy?.required && text.trim().length < copy.required;
 
   return (
     <Dialog open={!!action} onOpenChange={(open) => !open && onClose()}>
@@ -203,8 +229,14 @@ function ActionDialog({
             {copy.field && (
               <div className="grid gap-1.5">
                 <Label htmlFor="order-action-field">
-                  {copy.field === 'tracking' ? 'Tracking number' : 'Reason'}{' '}
-                  <span className="font-normal text-muted-foreground">(optional)</span>
+                  {copy.field === 'tracking'
+                    ? 'Tracking number'
+                    : action === 'dispute'
+                      ? 'What went wrong?'
+                      : 'Reason'}{' '}
+                  {!copy.required && (
+                    <span className="font-normal text-muted-foreground">(optional)</span>
+                  )}
                 </Label>
                 {copy.field === 'tracking' ? (
                   <Input
@@ -219,8 +251,8 @@ function ActionDialog({
                     id="order-action-field"
                     value={text}
                     onChange={(e) => setText(e.target.value)}
-                    rows={2}
-                    maxLength={500}
+                    rows={action === 'dispute' ? 4 : 2}
+                    maxLength={action === 'dispute' ? 1000 : 500}
                   />
                 )}
               </div>
@@ -230,11 +262,11 @@ function ActionDialog({
                 Back
               </Button>
               <Button
-                variant={action === 'cancel' ? 'destructive' : 'default'}
-                disabled={run.isPending}
+                variant={action === 'cancel' || action === 'refund' ? 'destructive' : 'default'}
+                disabled={pending || tooShort}
                 onClick={submit}
               >
-                {run.isPending && <Loader2 className="size-4 animate-spin" />}
+                {pending && <Loader2 className="size-4 animate-spin" />}
                 {copy.button}
               </Button>
             </DialogFooter>
@@ -283,10 +315,69 @@ const METHOD: Record<string, string> = {
   digital: 'Online',
 };
 
+/** What's happening to the money right now, in one line for whoever is looking. */
+function EscrowNote({ o }: { o: OrderDto }) {
+  const e = o.escrow;
+  let note: React.ReactNode = null;
+  if (o.status === 'disputed') {
+    note = 'Dispute open — the payment is frozen while our team reviews it. We’ll update you here.';
+  } else if (o.status === 'refunded') {
+    note = `Refunded to the buyer${o.cancelledAt ? ` on ${when(o.cancelledAt)}` : ''}.`;
+  } else if (e?.autoReleaseAt) {
+    note =
+      o.side === 'buyer'
+        ? `Got it? Confirm below. If there’s a problem, open a dispute before ${when(e.autoReleaseAt)} — after that the payment is released automatically.`
+        : `Payment is released to you on ${when(e.autoReleaseAt)}, or sooner if the buyer confirms.`;
+  } else if (e?.awaitingPayoutDetails && o.side === 'seller') {
+    note = (
+      <>
+        Your money is ready.{' '}
+        <Link
+          href="/settings#payouts"
+          className="font-medium text-primary underline-offset-4 hover:underline"
+        >
+          Add payout details
+        </Link>{' '}
+        and it’s sent right away.
+      </>
+    );
+  } else if (e?.status === 'partially_refunded') {
+    note = 'Settled: part refunded to the buyer, the rest released to the seller.';
+  } else if (e?.status === 'released' && o.side === 'seller') {
+    note = 'Paid out to your payout account.';
+  }
+  if (!note) return null;
+  return (
+    <p
+      className={cn(
+        'rounded-lg p-3 text-sm',
+        o.status === 'disputed' ? 'bg-destructive/10' : 'bg-muted/60 text-muted-foreground',
+      )}
+    >
+      {note}
+    </p>
+  );
+}
+
 export function OrderView({ id }: { id: string }) {
   const ready = useRequireAuth();
-  const q = useOrder(id);
-  const [action, setAction] = useState<StatusAction | null>(null);
+  const [action, setAction] = useState<DialogAction | null>(null);
+  const [paying, setPaying] = useState(false);
+  // Back from a gateway (?paid=1) or just paid here: the webhook decides, we watch.
+  const returned = useSearchParams().get('paid') === '1';
+  const [confirmingSince, setConfirmingSince] = useState<number | null>(() =>
+    returned ? Date.now() : null,
+  );
+  const q = useOrder(id, { poll: confirmingSince !== null });
+  const stillUnpaid = q.data?.status === 'awaiting_payment';
+  const confirming = confirmingSince !== null && stillUnpaid;
+  const slow = confirming && Date.now() - confirmingSince > 60_000;
+  useEffect(() => {
+    if (confirmingSince !== null && q.data && !stillUnpaid) {
+      setConfirmingSince(null);
+      toast.success('Payment received — it’s held in escrow');
+    }
+  }, [confirmingSince, q.data, stillUnpaid]);
 
   if (q.isError) {
     return (
@@ -314,7 +405,10 @@ export function OrderView({ id }: { id: string }) {
 
   const o = q.data;
   const other = o.side === 'buyer' ? o.seller : o.buyer;
-  const primary = o.actions.filter(isStatusAction).find((a) => a !== 'cancel');
+  const dialogActions = o.actions.filter(isDialogAction);
+  const primary = dialogActions.find((a) => a !== 'cancel' && a !== 'dispute' && a !== 'refund');
+  const secondary = dialogActions.filter((a) => a !== primary);
+  const canPay = o.actions.includes('pay');
   const addr = o.deliveryAddress;
 
   return (
@@ -371,16 +465,30 @@ export function OrderView({ id }: { id: string }) {
               )}
             >
               {o.side === 'buyer' ? (
-                <>
-                  <p className="font-medium">
-                    Pay {formatMoney(o.total, o.currency)} to confirm this order
+                confirming ? (
+                  <p className="flex items-center gap-2 font-medium" role="status">
+                    <Loader2 className="size-4 animate-spin" aria-hidden />
+                    {slow
+                      ? 'Still waiting for the payment provider — we’ll notify you when it lands.'
+                      : 'Confirming your payment…'}
                   </p>
-                  <p className="mt-1 text-muted-foreground">
-                    It&apos;s held for you until {when(o.paymentDueAt)}, then cancelled
-                    automatically. Secure checkout is being switched on — we&apos;ll notify you the
-                    moment you can pay.
-                  </p>
-                </>
+                ) : (
+                  <div className="flex flex-wrap items-end justify-between gap-3">
+                    <div>
+                      <p className="font-medium">
+                        Pay {formatMoney(o.total, o.currency)} to confirm this order
+                      </p>
+                      <p className="mt-1 text-muted-foreground">
+                        Held for you until {when(o.paymentDueAt)}, then cancelled automatically.
+                      </p>
+                    </div>
+                    {canPay && (
+                      <Button onClick={() => setPaying(true)} className="gap-1.5">
+                        <Lock className="size-4" /> Pay now
+                      </Button>
+                    )}
+                  </div>
+                )
               ) : (
                 <p>
                   Waiting for {other.displayName} to pay. Don&apos;t hand anything over until the
@@ -390,6 +498,8 @@ export function OrderView({ id }: { id: string }) {
             </div>
           )}
 
+          <EscrowNote o={o} />
+
           <section aria-labelledby="progress">
             <h2 id="progress" className="mb-3 text-sm font-semibold">
               Progress
@@ -397,18 +507,23 @@ export function OrderView({ id }: { id: string }) {
             <OrderTimeline o={o} />
           </section>
 
-          {(primary || o.actions.includes('cancel')) && (
+          {(primary || secondary.length > 0) && (
             <div className="flex flex-wrap gap-2">
               {primary && (
                 <Button onClick={() => setAction(primary)} className="gap-1.5">
                   <Check className="size-4" /> {CONFIRM[primary].button}
                 </Button>
               )}
-              {o.actions.includes('cancel') && (
-                <Button variant="outline" onClick={() => setAction('cancel')}>
-                  Cancel order
+              {secondary.map((a) => (
+                <Button
+                  key={a}
+                  variant={a === 'dispute' ? 'ghost' : 'outline'}
+                  onClick={() => setAction(a)}
+                  className={cn(a === 'dispute' && 'text-muted-foreground')}
+                >
+                  {CONFIRM[a].button}
                 </Button>
-              )}
+              ))}
             </div>
           )}
 
@@ -477,6 +592,14 @@ export function OrderView({ id }: { id: string }) {
       </div>
 
       <ActionDialog order={o} action={action} onClose={() => setAction(null)} />
+      {canPay && (
+        <PaymentDialog
+          order={o}
+          open={paying}
+          onOpenChange={setPaying}
+          onPaid={() => setConfirmingSince(Date.now())}
+        />
+      )}
     </div>
   );
 }

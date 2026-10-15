@@ -1,6 +1,7 @@
 'use client';
 
 import type {
+  BankDto,
   CancelOrderInput,
   ConversationDto,
   CounterOfferInput,
@@ -13,6 +14,9 @@ import type {
   OrderAction,
   OrderDto,
   OrderListItemDto,
+  PaymentSessionDto,
+  PayoutAccountDto,
+  PaystackPayoutInput,
   ShipOrderInput,
 } from '@markethub/shared';
 import {
@@ -114,12 +118,14 @@ export function useOrders(role: 'buying' | 'selling') {
   });
 }
 
-export function useOrder(id: string) {
+/** `poll` while a payment is being confirmed by the gateway's webhook. */
+export function useOrder(id: string, { poll = false } = {}) {
   const authed = useAuth((s) => s.status === 'authenticated');
   return useQuery({
     queryKey: dealKeys.order(id),
     queryFn: () => api<OrderDto>(`/orders/${id}`),
     enabled: authed,
+    refetchInterval: poll ? 2_000 : false,
   });
 }
 
@@ -209,5 +215,70 @@ export function useMarkNotificationRead() {
       }),
     onMutate: (id) => markLocal(qc, id),
     onError: () => void qc.invalidateQueries({ queryKey: dealKeys.notifications }),
+  });
+}
+
+// ─── Payments & payouts ──────────────────────────────────────────────────
+
+export function useStartPayment(orderId: string) {
+  return useMutation({
+    mutationFn: () => api<PaymentSessionDto>(`/orders/${orderId}/pay`, { method: 'POST' }),
+  });
+}
+
+/** Sandbox only: stands in for the gateway's card form. */
+export function useSandboxCharge() {
+  return useMutation({
+    mutationFn: (body: { ref: string; card: string }) =>
+      api<{ status: 'pending' | 'succeeded' | 'failed' }>('/payments/sandbox/pay', {
+        method: 'POST',
+        body,
+      }),
+  });
+}
+
+/** Dispute (buyer) and refund (seller) return no order; refetch it. */
+export function useEscrowAction(orderId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ action, body }: { action: 'dispute' | 'refund'; body: object }) =>
+      api(`/orders/${orderId}/${action}`, { method: 'POST', body }),
+    onSuccess: () => void qc.invalidateQueries({ queryKey: ['deals'] }),
+  });
+}
+
+export const payoutKeys = {
+  accounts: ['payouts', 'accounts'] as const,
+  banks: (currency: string) => ['payouts', 'banks', currency] as const,
+};
+
+export function usePayoutAccounts() {
+  const authed = useAuth((s) => s.status === 'authenticated');
+  return useQuery({
+    queryKey: payoutKeys.accounts,
+    queryFn: () => api<PayoutAccountDto[]>('/me/payout-accounts'),
+    enabled: authed,
+  });
+}
+
+export function useBanks(currency: string | null) {
+  return useQuery({
+    queryKey: payoutKeys.banks(currency ?? ''),
+    queryFn: () => api<BankDto[]>(`/payments/banks?currency=${currency}`),
+    enabled: !!currency,
+    staleTime: 60 * 60_000,
+  });
+}
+
+export function useSetupPayouts() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (
+      input: { gateway: 'stripe' } | ({ gateway: 'paystack' } & PaystackPayoutInput),
+    ) => {
+      const { gateway, ...body } = input;
+      return api<PayoutAccountDto>(`/me/payout-accounts/${gateway}`, { method: 'POST', body });
+    },
+    onSuccess: () => void qc.invalidateQueries({ queryKey: payoutKeys.accounts }),
   });
 }
