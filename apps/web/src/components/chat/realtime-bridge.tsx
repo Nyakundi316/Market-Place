@@ -63,7 +63,10 @@ export function RealtimeBridge() {
       'offer:update': (offer) => applyOffer(qc, offer),
       'notification:new': (n) => {
         prependNotification(qc, n);
-        if (n.type.startsWith('order.')) void qc.invalidateQueries({ queryKey: dealKeys.all });
+        // Anything that moves an order or its money refreshes the deal screens.
+        if (/^(order|payment|payout|dispute)\./.test(n.type)) {
+          void qc.invalidateQueries({ queryKey: dealKeys.all });
+        }
         // Chat has its own badge and live thread; deal events deserve a nudge.
         if (n.type === 'chat.message' || (n.link && window.location.pathname === n.link)) return;
         toast(n.title, {

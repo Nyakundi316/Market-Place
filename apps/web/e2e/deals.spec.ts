@@ -4,11 +4,11 @@ import { clearRateLimits, expect, test, uniqueHandle } from './support';
 test.beforeEach(() => clearRateLimits());
 
 /**
- * Offer → counter → accept → checkout → order, live across two browsers.
- * Shipping and delivery need a paid order (Phase 5), so the run ends with the
- * seller cancelling the unpaid order; the API e2e suite covers ship/deliver.
+ * The whole deal, live across two browsers: offer → counter → accept →
+ * checkout → pay (sandbox gateway, a decline then a success) → ship →
+ * confirm → the seller adds payout details and the escrow is released.
  */
-test('negotiate in chat, check out, and cancel the unpaid order', async ({ page, browser }) => {
+test('negotiate, pay into escrow, ship, confirm, and get paid out', async ({ page, browser }) => {
   test.slow();
 
   await verifiedUser(page, 'Wanjiku Gadgets');
@@ -94,15 +94,48 @@ test('negotiate in chat, check out, and cancel the unpaid order', async ({ page,
   await page.getByRole('link', { name: new RegExp(title) }).click();
   await expect(page.getByRole('heading', { name: orderNumber })).toBeVisible();
   await expect(page.getByText('KES 42,140')).toBeVisible();
-  await page.getByRole('button', { name: 'Cancel order' }).click();
-  const cancel = page.getByRole('dialog', { name: 'Cancel this order?' });
-  await cancel.getByLabel(/Reason/).fill('Sold it in the shop');
-  await cancel.getByRole('button', { name: 'Cancel order' }).click();
-  await expect(page.getByText('Order cancelled')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Cancel order' })).toHaveCount(0);
+  await expect(page.getByText(/Waiting for Otieno Buyer to pay/)).toBeVisible();
 
-  // The buyer's open order page catches up without a reload.
-  await expect(buyer.getByText('Cancelled').first()).toBeVisible();
-  await expect(buyer.getByText(/Pay KES/)).toHaveCount(0);
+  // Buyer pays (sandbox gateway): a decline first, then a good card.
+  await buyer.getByRole('button', { name: 'Pay now' }).click();
+  const payment = buyer.getByRole('dialog', { name: 'Pay KES 43,000' });
+  await payment.getByLabel('Card number').fill('4000 0000 0000 0002');
+  await payment.getByRole('button', { name: /^Pay KES/ }).click();
+  await expect(payment.getByText(/Card declined/)).toBeVisible();
+  await payment.getByLabel('Card number').fill('4242 4242 4242 4242');
+  await payment.getByRole('button', { name: /^Pay KES/ }).click();
+  await expect(payment).toBeHidden();
+  await expect(buyer.getByText('Paid · in escrow').first()).toBeVisible({ timeout: 15_000 });
+
+  // The seller's open page flips live; they ship with a tracking number.
+  await expect(page.getByText('Paid · in escrow').first()).toBeVisible({ timeout: 15_000 });
+  await page.getByRole('button', { name: 'Mark as shipped' }).click();
+  const ship = page.getByRole('dialog', { name: 'Mark as shipped' });
+  await ship.getByLabel(/Tracking number/).fill('G4S-55102');
+  await ship.getByRole('button', { name: 'Mark as shipped' }).click();
+  await expect(page.getByText('Shipped').first()).toBeVisible();
+
+  // Buyer sees it shipped and confirms receipt.
+  await expect(buyer.getByText('Tracking G4S-55102')).toBeVisible({ timeout: 15_000 });
+  await buyer.getByRole('button', { name: 'I received it' }).click();
+  await buyer
+    .getByRole('dialog', { name: 'Confirm you received it?' })
+    .getByRole('button', { name: 'I received it' })
+    .click();
+  await expect(buyer.getByText('Completed').first()).toBeVisible();
+
+  // Seller has no payout account yet: the money waits and the page says how to get it.
+  const orderUrl = page.url();
+  await page.getByRole('link', { name: 'Add payout details' }).click({ timeout: 15_000 });
+  await expect(page).toHaveURL(/\/settings#payouts$/);
+  await page.getByRole('button', { name: 'Add bank or mobile money' }).click();
+  await page.getByLabel('Bank or wallet').selectOption({ label: 'Sandbox Bank' });
+  await page.getByLabel('Account or phone number').fill('0123456789');
+  await page.getByRole('button', { name: 'Save payout account' }).click();
+  await expect(page.getByText('Sandbox Bank ····6789')).toBeVisible();
+  await expect(page.getByText('Ready for payouts')).toBeVisible();
+
+  await page.goto(orderUrl);
+  await expect(page.getByText('Paid out to your payout account.')).toBeVisible({ timeout: 15_000 });
   await buyer.close();
 });
