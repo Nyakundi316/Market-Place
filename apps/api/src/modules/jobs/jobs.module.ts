@@ -28,6 +28,7 @@ export const QUEUES = [
   'reconcile',
   'stats',
   'listing',
+  'cleanup',
 ] as const;
 export type QueueName = (typeof QUEUES)[number];
 

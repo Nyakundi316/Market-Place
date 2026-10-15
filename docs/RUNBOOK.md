@@ -70,7 +70,7 @@ Do the same for web if needed (web first if only the UI is broken). Database cha
 - **Health:** `GET /health` reports Redis and Postgres; Fly checks it every 15 s.
 - **Logs:** `fly logs -a markethub-api`. Every request has an `x-request-id`; it's in the response, in the logs, and on Sentry events. Users can quote it from error screens.
 - **Scale:** `fly scale count 3 -a markethub-api`. Sockets work across machines through the Redis adapter, which is why the client is websocket-only (polling would need sticky sessions).
-- **Queues** (BullMQ, Redis): `notify`, `email`, `offer`, `order`, `payout`, `reconcile`, `stats`. Jobs retry 5× with backoff, then land in `dead-letter` with the error. Every job is idempotent, so re-adding one is safe:
+- **Queues** (BullMQ, Redis): `notify`, `email`, `offer`, `order`, `payout`, `reconcile`, `stats`, `listing` (hourly expiry), `cleanup` (nightly housekeeping). Jobs retry 5× with backoff, then land in `dead-letter` with the error. Every job is idempotent, so re-adding one is safe:
   ```bash
   fly ssh console -a markethub-api -C "node -e \"…\""   # or redis-cli against REDIS_URL:
   LRANGE bull:dead-letter:wait 0 20

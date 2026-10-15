@@ -131,6 +131,7 @@ Tests: shared 68 · api unit 25 · api e2e 220 · web unit 29 · Playwright 34 (
 
 ## Shipped — post Phase 7
 - **§8 `listing:expire`**: hourly BullMQ scheduler (`:07` UTC) flips `active` listings past `expiresAt` to `expired`, unfeatures them, recomputes `Profile.listingsCount`, and sends one `listing.expired` notification per seller linking to `/seller?tab=expired` (renew = publish again). Idempotent via the status guard; search already hid them at the deadline.
+- **§8 `audit:cleanup`**: nightly (03:15 UTC) housekeeping in `modules/audit/cleanup.ts`: refresh tokens 30d past expiry, auth tokens expired/used >30d, read notifications >90d, processed webhook events >90d. **Decision (2026-10-15): `audit_logs`, transactions and escrow rows are never pruned**; unprocessed webhook events are kept for inspection
 
 ## Before launch (everything)
 - Real secrets for Stripe/Paystack (see below), `INTERNAL_API_KEY`, R2 buckets, Resend domain, `WEB_URL`/`API_URL`

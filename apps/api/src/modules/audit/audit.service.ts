@@ -1,6 +1,7 @@
 import { Global, Injectable, Module } from '@nestjs/common';
 import type { Prisma } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.module';
+import { Cleanup } from './cleanup';
 
 export interface AuditEntry {
   actorId: string | null;
@@ -22,5 +23,5 @@ export class AuditService {
 }
 
 @Global()
-@Module({ providers: [AuditService], exports: [AuditService] })
+@Module({ providers: [AuditService, Cleanup], exports: [AuditService] })
 export class AuditModule {}
