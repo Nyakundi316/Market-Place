@@ -109,8 +109,9 @@ test('settings: profile photo and bio update', async ({ page }) => {
   const username = await createProfile(page, 'Settings Tester');
   await page.goto('/settings');
   await page.getByLabel('Change profile photo').click();
+  // The page has other file inputs (verification documents); pick the avatar one.
   await page
-    .locator('input[type=file]')
+    .getByLabel('Choose profile photo')
     .setInputFiles({ name: 'me.png', mimeType: 'image/png', buffer: png(80, 80) });
   await expect(page.getByText('Photo updated')).toBeVisible({ timeout: 15_000 });
 

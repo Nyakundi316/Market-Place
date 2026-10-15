@@ -91,6 +91,7 @@ function AvatarPicker({ me }: { me: MeDto }) {
         ref={input}
         type="file"
         accept={ACCEPTED_IMAGES}
+        aria-label="Choose profile photo"
         className="sr-only"
         tabIndex={-1}
         onChange={(e) => {
