@@ -104,3 +104,10 @@ export interface FavoriteStateDto {
   favorited: boolean;
   favoritesCount: number;
 }
+
+/** GET /seo/sitemap — public URLs worth indexing, newest first. */
+export interface SitemapDto {
+  listings: { slug: string; updatedAt: string }[];
+  categories: { slug: string; updatedAt: string }[];
+  profiles: { username: string; updatedAt: string }[];
+}

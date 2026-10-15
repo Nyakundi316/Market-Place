@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import localFont from 'next/font/local';
+import { SITE_URL } from '@/lib/seo';
 import './globals.css';
 import { Providers } from './providers';
 
@@ -10,10 +11,16 @@ const mono = localFont({
   weight: '100 900',
 });
 
+const DESCRIPTION =
+  'Buy and sell products and services with verified people, real-time chat and escrow-protected payments.';
+
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
+  applicationName: 'MarketHub',
   title: { default: 'MarketHub', template: '%s · MarketHub' },
-  description:
-    'Buy and sell products and services with verified people, real-time chat and escrow-protected payments.',
+  description: DESCRIPTION,
+  openGraph: { siteName: 'MarketHub', type: 'website', locale: 'en', description: DESCRIPTION },
+  twitter: { card: 'summary_large_image' },
 };
 
 export const viewport: Viewport = {

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import { OrderView } from './order-view';
 
-export const metadata: Metadata = { title: 'Order' };
+export const metadata: Metadata = { title: 'Order', robots: { index: false } };
 
 export default function OrderPage({ params }: { params: { id: string } }) {
   return (

@@ -1,6 +1,8 @@
 import type { PublicProfileDto } from '@markethub/shared';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
+import { JsonLd } from '@/components/json-ld';
+import { profileJsonLd } from '@/lib/seo';
 import { serverGet } from '@/lib/server-api';
 import { ProfileView } from './profile-view';
 
@@ -16,11 +18,17 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: `${p.displayName} (@${p.username})`,
     description: p.bio ?? `${p.displayName} buys and sells on MarketHub.`,
     alternates: { canonical: `/u/${p.username}` },
+    openGraph: { type: 'profile', images: p.avatarUrl ? [{ url: p.avatarUrl }] : undefined },
   };
 }
 
 export default async function ProfilePage({ params }: Props) {
   const initial = await load(params.username);
   if (!initial) notFound();
-  return <ProfileView initial={initial} />;
+  return (
+    <>
+      <JsonLd data={profileJsonLd(initial)} />
+      <ProfileView initial={initial} />
+    </>
+  );
 }

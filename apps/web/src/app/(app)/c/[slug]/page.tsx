@@ -7,6 +7,8 @@ import { Suspense } from 'react';
 import { CategoryChips } from '@/components/listings/category-chips';
 import { ListingBrowser } from '@/components/listings/listing-browser';
 import { ListingGridSkeleton } from '@/components/listings/listing-grid';
+import { JsonLd } from '@/components/json-ld';
+import { breadcrumbJsonLd } from '@/lib/seo';
 import { serverGet } from '@/lib/server-api';
 
 type Props = { params: { slug: string } };
@@ -34,6 +36,12 @@ export default async function CategoryPage({ params }: Props) {
 
   return (
     <div className="animate-rise-in">
+      <JsonLd
+        data={breadcrumbJsonLd([
+          ...(parent ? [{ name: parent.name, path: `/c/${parent.slug}` }] : []),
+          { name: c.name, path: `/c/${c.slug}` },
+        ])}
+      />
       <nav
         aria-label="Breadcrumb"
         className="flex items-center gap-1 text-xs text-muted-foreground"

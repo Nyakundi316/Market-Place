@@ -1,6 +1,8 @@
 import type { ListingDetailDto } from '@markethub/shared';
 import type { Metadata } from 'next';
+import { JsonLd } from '@/components/json-ld';
 import { formatPrice } from '@/lib/format';
+import { listingJsonLd } from '@/lib/seo';
 import { serverGet } from '@/lib/server-api';
 import { ListingView } from './listing-view';
 
@@ -18,6 +20,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title: l.title,
     description,
     alternates: { canonical: `/l/${l.slug}` },
+    // Sold listings stay reachable (orders link to them) but drop out of results.
+    robots: l.status === 'active' ? undefined : { index: false },
     openGraph: {
       title: l.title,
       description,
@@ -29,5 +33,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function ListingPage({ params }: Props) {
   const initial = await load(params.slug);
-  return <ListingView slug={params.slug} initial={initial} />;
+  return (
+    <>
+      {initial && <JsonLd data={listingJsonLd(initial)} />}
+      <ListingView slug={params.slug} initial={initial} />
+    </>
+  );
 }
