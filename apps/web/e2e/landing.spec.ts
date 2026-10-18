@@ -31,8 +31,12 @@ test('left alone, the landing moves on to sign-up once the intro has played', as
 
 test('touching the page keeps the landing where it is', async ({ page }) => {
   await page.goto('/');
+  // Tap once the countdown runs, so the tap can't land before hydration under load.
+  const signUp = page.getByRole('banner').getByRole('link', { name: 'Sign up' });
+  await expect(signUp).toHaveAttribute('data-handoff', 'holding', { timeout: 10_000 });
   await page.mouse.click(10, 300);
-  await page.waitForTimeout(7_000);
+  await expect(signUp).toHaveAttribute('data-handoff', 'off');
+  await page.waitForTimeout(5_000);
   await expect(page).toHaveURL(/\/$/);
 });
 

@@ -82,7 +82,7 @@ export function SignupHandoff() {
       size="sm"
       className="relative ml-1 overflow-hidden rounded-full bg-foreground px-4 text-background hover:bg-foreground/85"
     >
-      <Link href="/signup">
+      <Link href="/signup" data-handoff={phase}>
         Sign up
         {phase === 'holding' && (
           <span

@@ -128,9 +128,9 @@ test('negotiate, pay into escrow, ship, confirm, and get paid out', async ({ pag
   const orderUrl = page.url();
   await page.getByRole('link', { name: 'Add payout details' }).click({ timeout: 15_000 });
   await expect(page).toHaveURL(/\/settings#payouts$/);
-  await page.getByRole('button', { name: 'Add bank or mobile money' }).click();
+  await page.getByRole('button', { name: 'Add bank or M-Pesa' }).click();
   await page.getByLabel('Bank or wallet').selectOption({ label: 'Sandbox Bank' });
-  await page.getByLabel('Account or phone number').fill('0123456789');
+  await page.getByLabel(/^Account number/).fill('0123456789');
   await page.getByRole('button', { name: 'Save payout account' }).click();
   await expect(page.getByText('Sandbox Bank ····6789')).toBeVisible();
   await expect(page.getByText('Ready for payouts')).toBeVisible();
