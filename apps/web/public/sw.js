@@ -9,14 +9,20 @@
 const VERSION = 'v1';
 const STATIC = `mh-static-${VERSION}`;
 const OFFLINE_URL = '/offline';
+const PRECACHE = [OFFLINE_URL, '/icons/192'];
+
+// Best effort: a precache that fails (slow first icon render, a flaky disk cache)
+// must not stop the whole worker installing.
+const precache = () =>
+  caches
+    .open(STATIC)
+    .then((cache) =>
+      Promise.all(PRECACHE.map((url) => cache.match(url).then((hit) => hit || cache.add(url)))),
+    )
+    .catch(() => undefined);
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches
-      .open(STATIC)
-      .then((cache) => cache.addAll([OFFLINE_URL, '/icons/192']))
-      .then(() => self.skipWaiting()),
-  );
+  event.waitUntil(precache().then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (event) => {
@@ -24,6 +30,7 @@ self.addEventListener('activate', (event) => {
     caches
       .keys()
       .then((keys) => Promise.all(keys.filter((k) => k !== STATIC).map((k) => caches.delete(k))))
+      .then(precache) // second chance for anything install couldn't fetch
       .then(() => self.clients.claim()),
   );
 });
@@ -45,7 +52,10 @@ self.addEventListener('fetch', (event) => {
           fetch(request).then((res) => {
             if (res.ok) {
               const copy = res.clone();
-              caches.open(STATIC).then((cache) => cache.put(request, copy));
+              caches
+                .open(STATIC)
+                .then((cache) => cache.put(request, copy))
+                .catch(() => undefined); // a missed cache write just means a network hit next time
             }
             return res;
           }),
@@ -56,6 +66,10 @@ self.addEventListener('fetch', (event) => {
 
   // Pages: always fresh from the network; only the offline page as a fallback.
   if (request.mode === 'navigate') {
-    event.respondWith(fetch(request).catch(() => caches.match(OFFLINE_URL)));
+    event.respondWith(
+      fetch(request).catch(() =>
+        caches.match(OFFLINE_URL).then((page) => page || Response.error()),
+      ),
+    );
   }
 });
