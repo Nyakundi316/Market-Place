@@ -12,7 +12,7 @@ For whoever is on call. Commands assume the repo root and a logged-in `flyctl`.
 | Redis 7 | managed (Upstash / Fly) | Cache, rate limits, presence, Socket.IO adapter, BullMQ. Losing it loses queued jobs, not money (see §6). |
 | Object storage | Cloudflare R2 (S3 API) | `S3_BUCKET` public (custom domain → `S3_PUBLIC_URL`); `S3_PRIVATE_BUCKET` **no public access** (ID documents). |
 | Email | Resend | Verified sending domain. |
-| Payments | Stripe (USD/EUR/GBP/UGX/TZS) + Paystack (NGN/GHS/KES/ZAR) | Webhooks are the only thing that marks orders paid. |
+| Payments | Paystack (KES/NGN/GHS/ZAR/USD; card, bank, M-Pesa / mobile money) | Webhooks are the only thing that marks orders paid. |
 | Errors / traces | Sentry, any OTLP collector | Both optional; off when their env is blank. |
 
 ## 2. Configuration
@@ -25,7 +25,6 @@ Set API secrets with `fly secrets set -a markethub-api KEY=value …` (each set 
 - `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` — ≥ 32 chars, different from each other
 - `INTERNAL_API_KEY` — same value on **web and API**; lets server-rendered pages skip the per-IP limit
 - `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_PRIVATE_BUCKET` (+ `S3_PUBLIC_URL`)
-- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PUBLISHABLE_KEY` (+ `STRIPE_CONNECT_CLIENT_ID`)
 - `PAYSTACK_SECRET_KEY`, `PAYSTACK_WEBHOOK_SECRET`
 - `RESEND_API_KEY`, `MAIL_FROM`
 - `AFRICASTALKING_USERNAME`, `AFRICASTALKING_API_KEY` (+ `AFRICASTALKING_SENDER_ID`) — without them phone verification shows as unavailable
@@ -38,11 +37,10 @@ Web secrets: `INTERNAL_API_KEY`, `SENTRY_DSN`. Build-time (public) values come f
 1. `fly apps create markethub-api` and `markethub-web`; provision Postgres and Redis; set secrets (§2).
 2. R2: two buckets. Public one behind a custom domain; private one with public access **off**. CORS on both for `WEB_URL` (PUT, GET; header `content-type`).
 3. Resend: verify the sending domain; set `MAIL_FROM`.
-4. Stripe: enable Connect (Express). Add a webhook endpoint `https://<api>/webhooks/stripe` for `payment_intent.succeeded`, `payment_intent.payment_failed`, `refund.updated`, `transfer.reversed`, `account.updated`; put its signing secret in `STRIPE_WEBHOOK_SECRET`.
-5. Paystack: enable transfers; webhook URL `https://<api>/webhooks/paystack`; set `PAYSTACK_WEBHOOK_SECRET`.
-6. Africa's Talking: create the live app, top up SMS credit, and apply for an alphanumeric sender id (e.g. `MARKETHUB`; approval takes days per country). Set the `AFRICASTALKING_*` secrets. A low balance shows up as 503s on `/me/phone/send-code` and `InsufficientBalance` warnings in the API log.
-7. First deploy (§4). Then create the admin once: `fly ssh console -a markethub-api -C "node ./node_modules/.bin/tsx prisma/seed.ts"` with `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` set for that command only.
-8. DNS: apex → web, `api.` → API. Confirm `/robots.txt` allows crawling only on the real https domain.
+4. Paystack: enable transfers; webhook URL `https://<api>/webhooks/paystack`; set `PAYSTACK_WEBHOOK_SECRET`.
+5. Africa's Talking: create the live app, top up SMS credit, and apply for an alphanumeric sender id (e.g. `MARKETHUB`; approval takes days per country). Set the `AFRICASTALKING_*` secrets. A low balance shows up as 503s on `/me/phone/send-code` and `InsufficientBalance` warnings in the API log.
+6. First deploy (§4). Then create the admin once: `fly ssh console -a markethub-api -C "node ./node_modules/.bin/tsx prisma/seed.ts"` with `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` set for that command only.
+7. DNS: apex → web, `api.` → API. Confirm `/robots.txt` allows crawling only on the real https domain.
 
 ## 4. Deploying
 

@@ -35,7 +35,7 @@ Docker images (`infra/Dockerfile.api`, `infra/Dockerfile.web`) are built by CI o
 
 ## Environment
 
-Validated at boot by `packages/shared/src/env.ts`; the API refuses to start on a bad value. See `.env.example` for every key. In production the S3, Stripe (incl. `STRIPE_PUBLISHABLE_KEY`), Paystack and Resend keys are required and `WEB_URL`/`API_URL` must be https.
+Validated at boot by `packages/shared/src/env.ts`; the API refuses to start on a bad value. See `.env.example` for every key. In production the S3, Paystack and Resend keys are required and `WEB_URL`/`API_URL` must be https.
 
 ## API
 
@@ -107,17 +107,17 @@ Order numbers are `ORD-YYYY-NNNNNN` from a Postgres sequence. The platform fee (
 ### Payments & escrow
 | | |
 | --- | --- |
-| `POST /orders/:id/pay` | buyer; returns a payment session (Stripe client secret + publishable key, Paystack hosted URL, or sandbox). Idempotent per order; never marks it paid. Rate limit 5/min |
+| `POST /orders/:id/pay` | buyer; returns a payment session (Paystack hosted checkout URL, or the sandbox). Idempotent per order; never marks it paid. Rate limit 5/min |
 | `POST /orders/:id/dispute` | buyer, from `shipped`/`delivered`, within `DISPUTE_WINDOW_DAYS` of delivery; `{ reason }` |
 | `POST /orders/:id/refund` | seller, from `in_escrow`: full refund, item back on sale |
-| `GET /me/payout-accounts` · `POST /me/payout-accounts/stripe` · `POST /me/payout-accounts/paystack` | Stripe Connect Express onboarding (returns `actionUrl`) or a Paystack recipient `{ bankCode, accountNumber, currency }` |
-| `GET /payments/banks?currency=` | NGN, GHS, KES, ZAR |
+| `GET /me/payout-accounts` · `POST /me/payout-accounts/paystack` | Paystack transfer recipient `{ bankCode, accountNumber, currency }`; M-Pesa and other wallets use their mobile-money bank code with the phone number |
+| `GET /payments/banks?currency=` | KES, NGN, GHS, ZAR (banks and mobile-money wallets) |
 | `GET /admin/disputes` · `POST /admin/disputes/:orderId/resolve` | admin; `{ outcome: release\|refund\|split, refundAmount?, note }` |
-| `POST /webhooks/stripe` · `/webhooks/paystack` | public, signature-checked over the raw body, not rate limited |
+| `POST /webhooks/paystack` | public, signature-checked over the raw body, not rate limited |
 
 Flow (§7): pay → gateway → **webhook** marks the order paid and opens an `EscrowHold` → ship → deliver → buyer confirms (or `ESCROW_AUTO_RELEASE_HOURS` pass) → net of the fee is transferred to the seller's payout account. Without a payout account the money waits in escrow and the seller is asked to add one. Disputes freeze the hold until an admin releases, refunds or splits it. Money rows are never deleted; refunds and reversals are new rows.
 
-Gateways: Paystack for NGN/GHS/KES/ZAR, Stripe for everything else. **Without keys (dev/test) both are served by a sandbox**: Stripe's test cards (`4242 4242 4242 4242` pays, `4000 0000 0000 0002` declines), signed events through the same webhook path, instant payouts. Production refuses to boot without real keys.
+Gateway: Paystack only (Stripe doesn't serve Kenyan businesses), charging KES, NGN, GHS, ZAR and USD by card, bank or mobile money. The `PaymentProvider` adapter (§7) stays, so another gateway can slot in behind `gatewayFor()`. **Without keys (dev/test) a sandbox stands in**: the usual test cards (`4242 4242 4242 4242` pays, `4000 0000 0000 0002` declines), signed events through the same webhook path, instant payouts. Production refuses to boot without real keys.
 
 ### Trust: reviews, reports, verification
 | | |
