@@ -50,3 +50,34 @@ export interface NotificationDto {
   isRead: boolean;
   createdAt: string;
 }
+
+// ─── Web Push (brief §3 addendum) ─────────────────────────────────────────
+
+const base64url = (max: number) =>
+  z
+    .string()
+    .min(1)
+    .max(max)
+    .regex(/^[\w-]+=*$/, 'Must be base64url');
+
+/**
+ * `PushSubscription.toJSON()` from the browser. Not strict: browsers add
+ * `expirationTime` (and may add more); only these fields are kept.
+ */
+export const pushSubscriptionSchema = z.object({
+  endpoint: z
+    .string()
+    .url()
+    .max(2048)
+    .refine((u) => u.startsWith('https://'), 'Must be https'),
+  keys: z.object({ p256dh: base64url(256), auth: base64url(64) }),
+});
+
+export const pushEndpointSchema = z.object({ endpoint: z.string().url().max(2048) }).strict();
+
+export type PushSubscriptionInput = z.infer<typeof pushSubscriptionSchema>;
+
+/** `publicKey` is the VAPID key the browser subscribes with; null = push is off on this server. */
+export interface PushConfigDto {
+  publicKey: string | null;
+}

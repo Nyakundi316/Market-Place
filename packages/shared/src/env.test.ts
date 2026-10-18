@@ -35,6 +35,18 @@ describe('parseEnv', () => {
     expect(() => parseEnv({ ...valid, GITHUB_CLIENT_ID: 'x' })).toThrow(/GITHUB OAuth/);
   });
 
+  it('rejects half a VAPID pair and subjects push services would refuse', () => {
+    expect(() => parseEnv({ ...valid, VAPID_PUBLIC_KEY: 'BPub' })).toThrow(/VAPID_PRIVATE_KEY/);
+    expect(() =>
+      parseEnv({
+        ...valid,
+        VAPID_PUBLIC_KEY: 'BPub',
+        VAPID_PRIVATE_KEY: 'priv',
+        VAPID_SUBJECT: 'support@markethub.co',
+      }),
+    ).toThrow(/VAPID_SUBJECT/);
+  });
+
   it("rejects half-configured Africa's Talking", () => {
     expect(() => parseEnv({ ...valid, AFRICASTALKING_USERNAME: 'sandbox' })).toThrow(
       /AFRICASTALKING_API_KEY/,

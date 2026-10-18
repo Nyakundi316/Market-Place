@@ -24,6 +24,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { OffersModule } from './modules/offers/offers.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { PaymentsModule } from './modules/payments/payments.module';
+import { PushModule } from './modules/push/push.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { VerificationModule } from './modules/verification/verification.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
@@ -47,6 +48,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
     CategoriesModule,
     ListingsModule,
     ChatModule,
+    PushModule,
     NotificationsModule,
     OffersModule,
     OrdersModule,

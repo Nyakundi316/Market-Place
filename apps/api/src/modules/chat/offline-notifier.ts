@@ -5,6 +5,7 @@ import { InjectEnv } from '../../config/env.validation';
 import { PrismaService } from '../../prisma/prisma.module';
 import { JobsService } from '../jobs/jobs.module';
 import { MailService } from '../mail/mail.service';
+import { PushService } from '../push/push.service';
 import { RealtimeService } from './realtime.service';
 
 export interface OfflineJob {
@@ -35,6 +36,7 @@ export class OfflineNotifier implements OnModuleInit {
     private readonly db: PrismaService,
     private readonly mail: MailService,
     private readonly realtime: RealtimeService,
+    private readonly push: PushService,
     @InjectEnv() private readonly env: Env,
   ) {}
 
@@ -111,7 +113,7 @@ export class OfflineNotifier implements OnModuleInit {
       text: `${name}: ${preview}${more}\n\nReply on MarketHub: ${link}`,
       html: `<p><strong>${escapeHtml(name)}</strong>: ${escapeHtml(preview)}${escapeHtml(more)}</p><p><a href="${link}">Reply on MarketHub</a></p>`,
     });
-    await this.db.notification.create({
+    const row = await this.db.notification.create({
       data: {
         userId: recipientId,
         type: 'chat.message',
@@ -121,6 +123,7 @@ export class OfflineNotifier implements OnModuleInit {
         payload: { conversationId, messageId: latest.id, unread },
       },
     });
+    await this.push.enqueue(row.id);
     return 'sent';
   }
 }

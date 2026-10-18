@@ -17,6 +17,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { useMe } from '@/hooks/use-me';
 import { logout } from '@/lib/api';
+import { forgetPushDevice } from '@/lib/push';
 import { useAuth } from '@/stores/auth';
 import { t } from '@/i18n';
 
@@ -47,6 +48,7 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
   const profileHref = me?.profile ? `/u/${me.profile.username}` : '/onboarding';
 
   async function signOut() {
+    await forgetPushDevice(); // while the session can still say which device to drop
     await logout();
     queryClient.clear();
     router.push('/feed');

@@ -27,6 +27,7 @@ Set API secrets with `fly secrets set -a markethub-api KEY=value …` (each set 
 - `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_PRIVATE_BUCKET` (+ `S3_PUBLIC_URL`)
 - `PAYSTACK_SECRET_KEY`, `PAYSTACK_WEBHOOK_SECRET`
 - `RESEND_API_KEY`, `MAIL_FROM`
+- `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (+ `VAPID_SUBJECT`, defaults to `mailto:` + `MAIL_FROM`'s address) — Web Push; without them push is off. **Generate once and keep**: a new pair silently invalidates every browser's subscription
 - `AFRICASTALKING_USERNAME`, `AFRICASTALKING_API_KEY` (+ `AFRICASTALKING_SENDER_ID`) — without them phone verification shows as unavailable
 - Optional: `SENTRY_DSN`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS`, OAuth client ids/secrets
 
@@ -39,8 +40,9 @@ Web secrets: `INTERNAL_API_KEY`, `SENTRY_DSN`. Build-time (public) values come f
 3. Resend: verify the sending domain; set `MAIL_FROM`.
 4. Paystack: enable transfers; webhook URL `https://<api>/webhooks/paystack`; set `PAYSTACK_WEBHOOK_SECRET`.
 5. Africa's Talking: create the live app, top up SMS credit, and apply for an alphanumeric sender id (e.g. `MARKETHUB`; approval takes days per country). Set the `AFRICASTALKING_*` secrets. A low balance shows up as 503s on `/me/phone/send-code` and `InsufficientBalance` warnings in the API log.
-6. First deploy (§4). Then create the admin once: `fly ssh console -a markethub-api -C "node ./node_modules/.bin/tsx prisma/seed.ts"` with `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` set for that command only.
-7. DNS: apex → web, `api.` → API. Confirm `/robots.txt` allows crawling only on the real https domain.
+6. Web Push: `npx web-push generate-vapid-keys` once; set `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` on the API and store the pair in your password manager. Never rotate casually: every existing browser subscription stops working and users have to switch push back on.
+7. First deploy (§4). Then create the admin once: `fly ssh console -a markethub-api -C "node ./node_modules/.bin/tsx prisma/seed.ts"` with `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` set for that command only.
+8. DNS: apex → web, `api.` → API. Confirm `/robots.txt` allows crawling only on the real https domain.
 
 ## 4. Deploying
 
@@ -117,4 +119,4 @@ Do the same for web if needed (web first if only the UI is broken). Database cha
 
 ## 10. Known gaps before launch
 
-- **Push notifications** (FCM) and device tokens are not built yet; users get in-app and email notifications.
+No feature gaps left in code. What remains is accounts and keys (§2, §3) and a k6 run against staging at expected peak; the checklist lives in `PROGRESS.md` → "Before launch".

@@ -16,4 +16,8 @@ Object.assign(process.env, {
   S3_ACCESS_KEY: process.env.S3_ACCESS_KEY ?? 'markethub',
   S3_SECRET_KEY: process.env.S3_SECRET_KEY ?? 'markethub-dev-secret',
   S3_REGION: 'us-east-1',
+  // Test-only VAPID pair; PushSender is stubbed, so nothing reaches a push service.
+  VAPID_PUBLIC_KEY:
+    'BCku-lY9F9ODMaOsiOWbP2Py9Y9ANaKZf2F-J56aHCZjdNKTF-1yuXm2cMQ5CQ1yY9uWbE07jkVVAshkWc0cLFA',
+  VAPID_PRIVATE_KEY: 'DR6LFPujAILQ-9n0ogZPEYb_d1AENnU6HasBOhQ7c6Y',
 });

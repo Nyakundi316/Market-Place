@@ -28,6 +28,7 @@ import { useRequireAuth } from '@/hooks/use-require-auth';
 import { api, ApiError } from '@/lib/api';
 import { countryOptions } from '@/lib/countries';
 import { applyApiErrors } from '@/lib/form-errors';
+import { NotificationsSection } from './notifications-section';
 import { PayoutsSection } from './payouts-section';
 import { VerificationSection } from './verification-section';
 import { ACCEPTED_IMAGES, uploadAvatar } from '@/lib/images';
@@ -292,6 +293,7 @@ export function SettingsView() {
           <div className="mt-8 space-y-10">
             {me.profile && <AvatarPicker me={me} />}
             <SettingsForm me={me} />
+            <NotificationsSection />
             {me.profile && <VerificationSection emailVerified={me.user.isEmailVerified} />}
             {me.profile && <PayoutsSection />}
           </div>

@@ -56,7 +56,17 @@ const base = z.object({
   SMTP_HOST: z.string().default('localhost'),
   SMTP_PORT: z.coerce.number().int().positive().default(1025),
   MAIL_FROM: z.string().default('MarketHub <no-reply@markethub.local>'),
-  FCM_SERVER_KEY: optional,
+  // Documented extra (replaces §12 FCM_SERVER_KEY): Web Push. Generate a pair with
+  // `npx web-push generate-vapid-keys`. Blank = push off; in-app + email still work.
+  // Subject defaults to MAIL_FROM's address as a mailto: link.
+  VAPID_PUBLIC_KEY: optional,
+  VAPID_PRIVATE_KEY: optional,
+  VAPID_SUBJECT: optional.pipe(
+    z
+      .string()
+      .regex(/^(mailto:|https:\/\/)/, 'must be a mailto: or https:// URL')
+      .optional(),
+  ),
 
   // Documented extra: SMS for phone verification codes. Username "sandbox" talks
   // to Africa's Talking's simulator. Blank = Redis outbox outside production, and
@@ -109,6 +119,14 @@ export const envSchema = base.superRefine((env, ctx) => {
         message: `${p} OAuth needs both id and secret`,
       });
     }
+  }
+
+  if (Boolean(env.VAPID_PUBLIC_KEY) !== Boolean(env.VAPID_PRIVATE_KEY)) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['VAPID_PRIVATE_KEY'],
+      message: 'Web Push needs both VAPID keys',
+    });
   }
 
   if (Boolean(env.AFRICASTALKING_USERNAME) !== Boolean(env.AFRICASTALKING_API_KEY)) {

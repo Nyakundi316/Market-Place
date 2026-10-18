@@ -136,6 +136,7 @@ model User {
   reviewsGiven        Review[]              @relation("reviewRater")
   reviewsReceived     Review[]              @relation("reviewRatee")
   notifications       Notification[]
+  pushSubscriptions   PushSubscription[]
   auditLogs           AuditLog[]
   reportsFiled        Report[]              @relation("reportReporter")
   reportsResolved     Report[]              @relation("reportResolver")
@@ -579,6 +580,25 @@ model Notification {
 
   @@index([userId, isRead, createdAt(sort: Desc)])
   @@map("notifications")
+}
+
+/// One per browser/device (Web Push, brief §3 addendum). The endpoint is the device's
+/// address at its push service; signing in as someone else on it moves it over.
+model PushSubscription {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  endpoint   String    @unique
+  p256dh     String
+  auth       String
+  userAgent  String?   @map("user_agent")
+  lastPushAt DateTime? @map("last_push_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("push_subscriptions")
 }
 
 /// Append-only, so createdAt only. actorId null = system/job.

@@ -15,13 +15,15 @@ import { ENV } from '../../config/env.validation';
 
 /**
  * §8 queues. BullMQ forbids ':' in queue names, so "notify:offline" is queue
- * `notify`, job `offline`; "email:send" is queue `email`, job `send`.
+ * `notify`, job `offline`; "email:send" is queue `email`, job `send`; "push:send"
+ * is queue `push`, job `send`.
  * Custom jobIds may contain ':' only as exactly three parts (`a:b:c`);
  * anything else makes `add()` throw, so prefer `-` as the separator.
  */
 export const QUEUES = [
   'notify',
   'email',
+  'push',
   'offer',
   'order',
   'payout',

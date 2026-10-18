@@ -148,12 +148,17 @@ Gateway: Paystack only (Stripe doesn't serve Kenyan businesses), charging KES, N
 | --- | --- |
 | `GET /notifications` | `unread=true\|false`; response also carries the `unread` count |
 | `POST /notifications/read-all` · `POST /notifications/:id/read` | |
+| `GET /push/config` | public; `{ publicKey }` (VAPID), `null` when push is off |
+| `POST /me/push-subscriptions` · `DELETE /me/push-subscriptions` | body = the browser's `PushSubscription.toJSON()` / `{ endpoint }`; 204. One row per device (unique endpoint, moves to whoever subscribes it last), 10 per account |
+
+Push is standard Web Push with VAPID (`VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`, generate with `npx web-push generate-vapid-keys`): Chrome, Edge, Firefox, Android, and iOS 16.4+ once added to the Home Screen. Like email it only goes out when the recipient has no live socket. Settings → Notifications turns it on per device; signing out drops the device.
 
 ### Background jobs (BullMQ, in the API process)
 | Queue · job | |
 | --- | --- |
-| `notify` · `offline` | chat email when the recipient has no socket, debounced 60 s |
+| `notify` · `offline` | chat email (and push) when the recipient has no socket, debounced 60 s |
 | `email` · `send` | email for a notification when the recipient is offline |
+| `push` · `send` | Web Push to each of the recipient's devices; drops devices the push service reports gone (404/410); retries only if no device got it |
 | `offer` · `expire` | settles a pending offer at its `expiresAt` |
 | `order` · `payment-timeout` | cancels an unpaid order after 24 h |
 | `payout` · `release` | transfers the seller's net once the order completes |

@@ -14,6 +14,7 @@ import { PrismaService } from '../../prisma/prisma.module';
 import { RealtimeService } from '../chat/realtime.service';
 import { JobsService } from '../jobs/jobs.module';
 import { MailService } from '../mail/mail.service';
+import { PushService } from '../push/push.service';
 
 export interface NotifyInput {
   type: NotificationType;
@@ -45,8 +46,8 @@ export const toNotification = (n: Notification): NotificationDto => ({
 });
 
 /**
- * In-app first (row + `notification:new`), email only when the recipient has
- * no live socket — the same rule chat uses. Mail goes through §8 `email:send`
+ * In-app first (row + `notification:new`), email and push only when the
+ * recipient has no live socket — the same rule chat uses. Mail goes through §8 `email:send`
  * so a slow or failing provider never holds up the request that caused it.
  */
 @Injectable()
@@ -58,6 +59,7 @@ export class NotificationsService implements OnModuleInit {
     private readonly realtime: RealtimeService,
     private readonly jobs: JobsService,
     private readonly mail: MailService,
+    private readonly push: PushService,
     @InjectEnv() private readonly env: Env,
   ) {}
 
@@ -85,6 +87,7 @@ export class NotificationsService implements OnModuleInit {
         await this.jobs
           .queue('email')
           .add('send', { notificationId: row.id } satisfies EmailJob, { jobId: `email-${row.id}` });
+        await this.push.enqueue(row.id);
       }
     } catch (err) {
       // The deal already moved; a missed notice must not turn that into a 500.
