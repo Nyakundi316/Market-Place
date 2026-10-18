@@ -4,6 +4,7 @@ import type { OAuthProvider } from '@markethub/shared';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
+import { cn } from '@/lib/utils';
 
 const LABEL: Record<OAuthProvider, string> = { google: 'Google', github: 'GitHub' };
 
@@ -36,7 +37,7 @@ export function OAuthButtons({ verb }: { verb: 'Continue' | 'Sign up' }) {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-2 sm:grid-cols-2">
+      <div className={cn('grid gap-2', data.providers.length > 1 && 'sm:grid-cols-2')}>
         {data.providers.map((p) => (
           <Button key={p} asChild variant="outline" className="gap-2 bg-card">
             {/* full navigation, not fetch: the provider round-trip needs real redirects */}

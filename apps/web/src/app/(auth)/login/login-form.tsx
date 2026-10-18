@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
+import { AuthTabs } from '@/components/auth/auth-tabs';
 import { FormAlert } from '@/components/auth/form-alert';
 import { OAuthButtons } from '@/components/auth/oauth-buttons';
 import { PasswordInput } from '@/components/auth/password-input';
@@ -41,22 +42,13 @@ export function LoginForm() {
     api('/auth/login', { method: 'POST', body, retryOn401: false }),
   );
   const redirectError = REDIRECT_ERRORS[params.get('error') ?? ''];
-  const signupHref = `/signup${params.get('next') ? `?next=${encodeURIComponent(params.get('next')!)}` : ''}`;
 
   return (
     <>
-      <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        New here?{' '}
-        <Link
-          href={signupHref}
-          className="font-medium text-primary underline-offset-4 hover:underline"
-        >
-          Create an account
-        </Link>
-      </p>
+      <AuthTabs current="login" next={params.get('next')} />
+      <h1 className="mt-7 text-2xl font-semibold tracking-tight">Welcome back</h1>
 
-      <div className="mt-8 space-y-6">
+      <div className="mt-6 space-y-6">
         <FormAlert>{error ?? redirectError}</FormAlert>
         <OAuthButtons verb="Continue" />
 
@@ -69,7 +61,13 @@ export function LoginForm() {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input type="email" autoComplete="email" inputMode="email" {...field} />
+                    <Input
+                      type="email"
+                      autoComplete="email"
+                      inputMode="email"
+                      className="h-11 rounded-xl"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -90,13 +88,21 @@ export function LoginForm() {
                     </Link>
                   </div>
                   <FormControl>
-                    <PasswordInput autoComplete="current-password" {...field} />
+                    <PasswordInput
+                      autoComplete="current-password"
+                      className="h-11 rounded-xl pr-10"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+            <Button
+              type="submit"
+              className="h-11 w-full rounded-full"
+              disabled={form.formState.isSubmitting}
+            >
               {form.formState.isSubmitting ? 'Logging in…' : 'Log in'}
             </Button>
           </form>

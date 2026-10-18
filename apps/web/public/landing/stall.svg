@@ -1,0 +1,71 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 210" fill="none">
+  <defs>
+    <clipPath id="scene"><rect x="10" y="10" width="240" height="190" rx="16"/></clipPath>
+    <linearGradient id="sky" x1="0" y1="10" x2="0" y2="176" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FDF0D5"/>
+      <stop offset="1" stop-color="#F7D9A6"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="260" height="210" rx="26" fill="#FFFDF8"/>
+
+  <g clip-path="url(#scene)">
+    <rect x="10" y="10" width="240" height="190" fill="url(#sky)"/>
+    <circle cx="214" cy="46" r="17" fill="#F2A93B"/>
+    <rect x="10" y="176" width="240" height="24" fill="#E6C48D"/>
+
+    <!-- posts -->
+    <rect x="44" y="84" width="7" height="96" rx="2" fill="#14201B"/>
+    <rect x="209" y="84" width="7" height="96" rx="2" fill="#14201B"/>
+
+    <!-- striped awning, narrower at the back -->
+    <path d="M66 44H82L61 88H38Z" fill="#0F7B5F"/>
+    <path d="M82 44H98L84 88H61Z" fill="#FFF8EC"/>
+    <path d="M98 44H114L107 88H84Z" fill="#0F7B5F"/>
+    <path d="M114 44H130V88H107Z" fill="#FFF8EC"/>
+    <path d="M130 44H146L153 88H130Z" fill="#0F7B5F"/>
+    <path d="M146 44H162L176 88H153Z" fill="#FFF8EC"/>
+    <path d="M162 44H178L199 88H176Z" fill="#0F7B5F"/>
+    <path d="M178 44H194L222 88H199Z" fill="#FFF8EC"/>
+    <circle cx="49.5" cy="88" r="11.5" fill="#0F7B5F"/>
+    <circle cx="72.5" cy="88" r="11.5" fill="#FFF8EC"/>
+    <circle cx="95.5" cy="88" r="11.5" fill="#0F7B5F"/>
+    <circle cx="118.5" cy="88" r="11.5" fill="#FFF8EC"/>
+    <circle cx="141.5" cy="88" r="11.5" fill="#0F7B5F"/>
+    <circle cx="164.5" cy="88" r="11.5" fill="#FFF8EC"/>
+    <circle cx="187.5" cy="88" r="11.5" fill="#0F7B5F"/>
+    <circle cx="210.5" cy="88" r="11.5" fill="#FFF8EC"/>
+    <rect x="60" y="38" width="140" height="9" rx="4.5" fill="#14201B"/>
+
+    <!-- produce -->
+    <circle cx="66" cy="100" r="9" fill="#F2A93B"/>
+    <circle cx="83" cy="99" r="9" fill="#EE9F2C"/>
+    <circle cx="57" cy="110" r="9" fill="#F2A93B"/>
+    <circle cx="74" cy="109" r="9" fill="#F5B44F"/>
+    <circle cx="91" cy="110" r="9" fill="#F2A93B"/>
+    <circle cx="71" cy="105" r="2.4" fill="#FBD58C"/>
+    <circle cx="88" cy="96" r="2.4" fill="#FBD58C"/>
+
+    <circle cx="128" cy="100" r="8.5" fill="#D9472F"/>
+    <circle cx="120" cy="110" r="8.5" fill="#E2553E"/>
+    <circle cx="137" cy="109" r="8.5" fill="#D9472F"/>
+    <circle cx="146" cy="101" r="8" fill="#E2553E"/>
+    <path d="M125 92.5l3 2.5 3-2.5M143 93.5l3 2.5 3-2.5" stroke="#2F7D3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <circle cx="174" cy="104" r="11" fill="#5DAA57"/>
+    <circle cx="194" cy="102" r="12" fill="#4C9A49"/>
+    <circle cx="206" cy="110" r="9" fill="#5DAA57"/>
+    <path d="M168 104c4-3 8-3 12 0M187 101c4-4 10-4 14 0" stroke="#2F7D3A" stroke-width="2" stroke-linecap="round"/>
+
+    <!-- crates -->
+    <rect x="48" y="112" width="54" height="22" rx="3" fill="#C9893F"/>
+    <rect x="110" y="112" width="44" height="22" rx="3" fill="#C9893F"/>
+    <rect x="162" y="112" width="52" height="22" rx="3" fill="#C9893F"/>
+    <path d="M48 123H102M110 123H154M162 123H214" stroke="#A86C2C" stroke-width="2"/>
+
+    <!-- counter -->
+    <rect x="34" y="132" width="192" height="46" rx="5" fill="#9B5E2A"/>
+    <rect x="34" y="132" width="192" height="8" rx="4" fill="#B97638"/>
+    <path d="M82 146V172M130 146V172M178 146V172" stroke="#87501F" stroke-width="2" stroke-linecap="round"/>
+  </g>
+</svg>

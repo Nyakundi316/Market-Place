@@ -2,10 +2,10 @@
 
 import { registerSchema } from '@markethub/shared';
 import { zodResolver } from '@hookform/resolvers/zod';
-import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import type { z } from 'zod';
+import { AuthTabs } from '@/components/auth/auth-tabs';
 import { FormAlert } from '@/components/auth/form-alert';
 import { OAuthButtons } from '@/components/auth/oauth-buttons';
 import { PasswordInput } from '@/components/auth/password-input';
@@ -41,22 +41,13 @@ export function SignupForm() {
   const { onSubmit, error } = useAuthSubmit(form, (body) =>
     api('/auth/register', { method: 'POST', body, retryOn401: false }),
   );
-  const loginHref = `/login${params.get('next') ? `?next=${encodeURIComponent(params.get('next')!)}` : ''}`;
 
   return (
     <>
-      <h1 className="text-2xl font-semibold tracking-tight">Create your account</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        Already trading here?{' '}
-        <Link
-          href={loginHref}
-          className="font-medium text-primary underline-offset-4 hover:underline"
-        >
-          Log in
-        </Link>
-      </p>
+      <AuthTabs current="signup" next={params.get('next')} />
+      <h1 className="mt-7 text-2xl font-semibold tracking-tight">Create your account</h1>
 
-      <div className="mt-8 space-y-6">
+      <div className="mt-6 space-y-6">
         <FormAlert>{error}</FormAlert>
         <OAuthButtons verb="Sign up" />
 
@@ -75,7 +66,7 @@ export function SignupForm() {
                       <label
                         key={r.value}
                         className={cn(
-                          'cursor-pointer rounded-lg border bg-card px-3 py-2.5 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring',
+                          'cursor-pointer rounded-xl border bg-card px-3 py-2.5 transition-colors has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring',
                           field.value === r.value
                             ? 'border-primary bg-primary/5'
                             : 'hover:border-foreground/30',
@@ -107,7 +98,13 @@ export function SignupForm() {
                 <FormItem>
                   <FormLabel>Email</FormLabel>
                   <FormControl>
-                    <Input type="email" autoComplete="email" inputMode="email" {...field} />
+                    <Input
+                      type="email"
+                      autoComplete="email"
+                      inputMode="email"
+                      className="h-11 rounded-xl"
+                      {...field}
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -120,7 +117,11 @@ export function SignupForm() {
                 <FormItem>
                   <FormLabel>Password</FormLabel>
                   <FormControl>
-                    <PasswordInput autoComplete="new-password" {...field} />
+                    <PasswordInput
+                      autoComplete="new-password"
+                      className="h-11 rounded-xl pr-10"
+                      {...field}
+                    />
                   </FormControl>
                   <FormDescription>
                     At least 8 characters. A short phrase works well.
@@ -129,7 +130,11 @@ export function SignupForm() {
                 </FormItem>
               )}
             />
-            <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+            <Button
+              type="submit"
+              className="h-11 w-full rounded-full"
+              disabled={form.formState.isSubmitting}
+            >
               {form.formState.isSubmitting ? 'Creating account…' : 'Create account'}
             </Button>
             <p className="text-center text-xs text-muted-foreground">
