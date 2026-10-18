@@ -1,6 +1,6 @@
 # Progress
 
-_Last updated: 2026-10-15_
+_Last updated: 2026-10-19_
 
 ## Shipped — Phase 1 (Foundation) ✅
 - **1.0** `packages/config`: shared tsconfig (base/nest/next/lib), ESLint flat config, Prettier; LF via `.gitattributes`; pnpm pinned to 9.15
@@ -132,22 +132,33 @@ Tests: shared 68 · api unit 25 · api e2e 220 · web unit 29 · Playwright 34 (
 ## Shipped — post Phase 7
 - **§8 `listing:expire`**: hourly BullMQ scheduler (`:07` UTC) flips `active` listings past `expiresAt` to `expired`, unfeatures them, recomputes `Profile.listingsCount`, and sends one `listing.expired` notification per seller linking to `/seller?tab=expired` (renew = publish again). Idempotent via the status guard; search already hid them at the deadline.
 - **§8 `audit:cleanup`**: nightly (03:15 UTC) housekeeping in `modules/audit/cleanup.ts`: refresh tokens 30d past expiry, auth tokens expired/used >30d, read notifications >90d, processed webhook events >90d. **Decision (2026-10-15): `audit_logs`, transactions and escrow rows are never pruned**; unprocessed webhook events are kept for inspection
+- **Paystack only** (2026-10-15): Stripe removed — it doesn't serve Kenyan businesses. README, RUNBOOK and the brief addendum caught up on 2026-10-19
+- **Landing + auth redesign**: the wordmark owns the first screen ("What's MarketHub?" pill pours out the brief); auth is one dark layout with a Sign up / Log in card. Left alone, the landing hands off to /signup after the intro — once per tab (Back doesn't bounce) and never for crawlers
+- **Phone verification live** via **Africa's Talking** (decision 2026-10-19): `AFRICASTALKING_USERNAME`/`_API_KEY` (+ `_SENDER_ID`); "sandbox" username → their simulator. Refused sends drop the code; unreachable numbers come back as a field error
+- **Push notifications** via **Web Push (VAPID)**, not FCM (decision 2026-10-19: FCM's legacy server key API is shut down, the app is a PWA, no Firebase SDK/account needed). `PushSubscription` model + migration, `GET /push/config`, `POST|DELETE /me/push-subscriptions`, §8 `push:send` beside `email:send` and `notify:offline`, Settings → Notifications, service-worker `push`/`notificationclick`. Verified end to end in real Chrome against Google's push service
+- Service worker: precache is now best-effort (a failed `/offline` or icon fetch used to stop the whole worker installing — and push with it)
+- E2E fixes: `deals.spec` still used pre-M-Pesa payout copy (red since 2213a09); the landing tap test raced hydration under load
+
+Tests (2026-10-19, local, prod builds): shared 73 · api unit 32 · api e2e 231 · web unit 32 · Playwright 42 (39 first run; the 3 failures above fixed and rerun green)
 
 ## Before launch (everything)
-- Real secrets for Stripe/Paystack (see below), `INTERNAL_API_KEY`, R2 buckets, Resend domain, `WEB_URL`/`API_URL`
-- Fly account + `FLY_API_TOKEN` secret and `API_URL`/`WEB_URL` repo variables for the Deploy workflow
-- **Open decisions:** SMS provider for phone verification; push notifications (FCM device tokens)
-- Run k6 against staging at expected peak before opening the doors
+Accounts and keys only — no open feature decisions. Details in `docs/RUNBOOK.md` §2–3.
+- [ ] `INTERNAL_API_KEY`, `JWT_*` (generate), `WEB_URL`/`API_URL`
+- [ ] R2: public + private buckets, CORS for `WEB_URL`
+- [ ] Resend: verify the sending domain, set `MAIL_FROM`
+- [ ] Paystack live: `PAYSTACK_SECRET_KEY`, `PAYSTACK_WEBHOOK_SECRET`; webhook → `{API_URL}/webhooks/paystack`; enable transfers
+- [ ] Africa's Talking: live app + SMS credit, apply for a `MARKETHUB` sender id (takes days), `AFRICASTALKING_*`
+- [ ] Web Push: `npx web-push generate-vapid-keys` once → `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`; keep the pair safe (rotating it kills every subscription)
+- [ ] OAuth (optional): Google + GitHub client ids/secrets
+- [ ] Fly: account, `FLY_API_TOKEN` secret, `API_URL`/`WEB_URL` repo variables for the Deploy workflow
+- [ ] k6 against staging at expected peak
 
-## Before launch (payments)
-- Put real keys in `.env`: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PUBLISHABLE_KEY`, `STRIPE_CONNECT_CLIENT_ID`, `PAYSTACK_SECRET_KEY`, `PAYSTACK_WEBHOOK_SECRET`
-- Register webhook endpoints: Stripe → `{API_URL}/webhooks/stripe` (payment_intent.succeeded, payment_intent.payment_failed, refund.updated, transfer.reversed, account.updated); Paystack → `{API_URL}/webhooks/paystack`
-- Enable Stripe Connect (Express) and Paystack transfers on the live accounts
+Local dev: `.env` now has a dev-only VAPID pair (push works with `pnpm build && pnpm start`; the service worker isn't registered under `pnpm dev`). For SMS locally, put the Africa's Talking sandbox username `sandbox` + its key in `.env`, or leave blank to read codes from the Redis outbox / API log.
 
 ## Blockers / decisions
 - `@RateLimit('auth')` (10/min/IP) covers credential endpoints only; refresh/logout/provider list are on the global limit (CGNAT would otherwise sign users out)
 - Locally the 8 GB machine swaps during E2E (argon2 + Chromium + Docker); `/health` hit 5s. Run E2E against `pnpm build` + `start`, not `pnpm dev`
-- Escrow model (Phase 5): default is charge-now + platform-held funds + Connect transfer on release, since card auths expire in ~7 days
-- Webhook idempotency (§7) will need a `WebhookEvent(eventId uniq)` table in Phase 5 — to be documented then
-- `main` is pushed to `origin`; CI runs on every push
+- Escrow model (Phase 5): charge now, platform holds the funds, Paystack transfer to the seller on release
+- `main` is pushed to `origin`; CI runs on every push. 2026-10-19 work is on branch `feat/launch-polish` (not pushed)
+- Headless Chrome via Playwright: a `viewport` override on a persistent context breaks Cache Storage ("Entry already exists"); not an app bug, noted for anyone scripting push checks
 - Stitch MCP not connected; UI follows §6 + CLAUDE.md design rules directly
