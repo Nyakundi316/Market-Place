@@ -35,6 +35,16 @@ describe('parseEnv', () => {
     expect(() => parseEnv({ ...valid, GITHUB_CLIENT_ID: 'x' })).toThrow(/GITHUB OAuth/);
   });
 
+  it("rejects half-configured Africa's Talking", () => {
+    expect(() => parseEnv({ ...valid, AFRICASTALKING_USERNAME: 'sandbox' })).toThrow(
+      /AFRICASTALKING_API_KEY/,
+    );
+    expect(
+      parseEnv({ ...valid, AFRICASTALKING_USERNAME: 'sandbox', AFRICASTALKING_API_KEY: 'k' })
+        .AFRICASTALKING_SENDER_ID,
+    ).toBeUndefined();
+  });
+
   it('requires payment, storage and mail keys plus https in production', () => {
     let message = '';
     try {

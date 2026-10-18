@@ -28,7 +28,7 @@ import { AuditService } from '../audit/audit.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { toParty } from '../offers/offers.mapper';
 import { UploadsService } from '../uploads/uploads.service';
-import { SmsSender } from './sms.sender';
+import { SmsError, SmsSender } from './sms.sender';
 
 const CODE_TTL_S = 10 * 60;
 const MAX_ATTEMPTS = 5;
@@ -123,7 +123,19 @@ export class VerificationService {
       'EX',
       CODE_TTL_S,
     );
-    await this.sms.send(phone, `Your MarketHub code is ${code}. It expires in 10 minutes.`);
+    try {
+      await this.sms.send(phone, `Your MarketHub code is ${code}. It expires in 10 minutes.`);
+    } catch (e) {
+      // A code nobody received mustn't be guessable for the next 10 minutes. The send
+      // still counts toward the cap, so a failing number can't be hammered.
+      await this.redis.del(otpKey(user.id));
+      if (e instanceof SmsError && e.badNumber)
+        throw new BadRequestException({
+          message: 'We can’t send texts to that number',
+          fields: { phone: ['Can’t receive SMS'] },
+        });
+      throw new ServiceUnavailableException('We couldn’t send the code — try again shortly');
+    }
     return { sent: true, expiresIn: CODE_TTL_S };
   }
 

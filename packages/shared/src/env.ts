@@ -58,6 +58,13 @@ const base = z.object({
   MAIL_FROM: z.string().default('MarketHub <no-reply@markethub.local>'),
   FCM_SERVER_KEY: optional,
 
+  // Documented extra: SMS for phone verification codes. Username "sandbox" talks
+  // to Africa's Talking's simulator. Blank = Redis outbox outside production, and
+  // phone verification switched off in production.
+  AFRICASTALKING_USERNAME: optional,
+  AFRICASTALKING_API_KEY: optional,
+  AFRICASTALKING_SENDER_ID: optional,
+
   // Observability (Phase 7): both off unless set. Read by src/instrumentation.ts
   // before validation; declared here so a typo'd URL still fails the boot.
   SENTRY_DSN: optional.pipe(z.string().url().optional()),
@@ -102,6 +109,14 @@ export const envSchema = base.superRefine((env, ctx) => {
         message: `${p} OAuth needs both id and secret`,
       });
     }
+  }
+
+  if (Boolean(env.AFRICASTALKING_USERNAME) !== Boolean(env.AFRICASTALKING_API_KEY)) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['AFRICASTALKING_API_KEY'],
+      message: "Africa's Talking needs both username and API key",
+    });
   }
 
   if (env.NODE_ENV !== 'production') return;

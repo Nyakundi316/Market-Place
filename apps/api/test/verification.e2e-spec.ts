@@ -1,7 +1,7 @@
 import type { INestApplication } from '@nestjs/common';
 import type Redis from 'ioredis';
 import request from 'supertest';
-import { smsOutboxKey } from '../src/modules/verification/sms.sender';
+import { SmsError, SmsSender, smsOutboxKey } from '../src/modules/verification/sms.sender';
 import { PrismaService } from '../src/prisma/prisma.module';
 import { REDIS } from '../src/redis/redis.module';
 import { createApp, makeUser, PNG, resetRateLimits, type TestUser } from './helpers';
@@ -108,6 +108,25 @@ describe('Verification (e2e)', () => {
       await send().expect(200);
       await send().expect(200);
       await send().expect(429);
+    });
+
+    it('a refused send leaves no live code: bad numbers blame the field, outages say so', async () => {
+      const sms = app.get(SmsSender);
+      const send = () =>
+        http().post('/me/phone/send-code').set('Authorization', user.auth).send({ phone: phone() });
+      const spy = jest.spyOn(sms, 'send');
+      try {
+        spy.mockRejectedValueOnce(new SmsError('InvalidPhoneNumber', true));
+        const bad = await send().expect(400);
+        expect(bad.body.fields).toEqual({ phone: ['Can’t receive SMS'] });
+        expect(await redis.exists(`phone:otp:${user.id}`)).toBe(0);
+
+        spy.mockRejectedValueOnce(new SmsError('SMS gateway responded 500'));
+        await send().expect(503);
+        expect(await redis.exists(`phone:otp:${user.id}`)).toBe(0);
+      } finally {
+        spy.mockRestore();
+      }
     });
 
     it('a number verified elsewhere can’t be claimed', async () => {

@@ -28,6 +28,7 @@ Set API secrets with `fly secrets set -a markethub-api KEY=value …` (each set 
 - `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PUBLISHABLE_KEY` (+ `STRIPE_CONNECT_CLIENT_ID`)
 - `PAYSTACK_SECRET_KEY`, `PAYSTACK_WEBHOOK_SECRET`
 - `RESEND_API_KEY`, `MAIL_FROM`
+- `AFRICASTALKING_USERNAME`, `AFRICASTALKING_API_KEY` (+ `AFRICASTALKING_SENDER_ID`) — without them phone verification shows as unavailable
 - Optional: `SENTRY_DSN`, `OTEL_EXPORTER_OTLP_ENDPOINT`, `OTEL_EXPORTER_OTLP_HEADERS`, OAuth client ids/secrets
 
 Web secrets: `INTERNAL_API_KEY`, `SENTRY_DSN`. Build-time (public) values come from the deploy workflow: `API_URL`, `WEB_URL`, `NEXT_PUBLIC_SENTRY_DSN`.
@@ -39,8 +40,9 @@ Web secrets: `INTERNAL_API_KEY`, `SENTRY_DSN`. Build-time (public) values come f
 3. Resend: verify the sending domain; set `MAIL_FROM`.
 4. Stripe: enable Connect (Express). Add a webhook endpoint `https://<api>/webhooks/stripe` for `payment_intent.succeeded`, `payment_intent.payment_failed`, `refund.updated`, `transfer.reversed`, `account.updated`; put its signing secret in `STRIPE_WEBHOOK_SECRET`.
 5. Paystack: enable transfers; webhook URL `https://<api>/webhooks/paystack`; set `PAYSTACK_WEBHOOK_SECRET`.
-6. First deploy (§4). Then create the admin once: `fly ssh console -a markethub-api -C "node ./node_modules/.bin/tsx prisma/seed.ts"` with `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` set for that command only.
-7. DNS: apex → web, `api.` → API. Confirm `/robots.txt` allows crawling only on the real https domain.
+6. Africa's Talking: create the live app, top up SMS credit, and apply for an alphanumeric sender id (e.g. `MARKETHUB`; approval takes days per country). Set the `AFRICASTALKING_*` secrets. A low balance shows up as 503s on `/me/phone/send-code` and `InsufficientBalance` warnings in the API log.
+7. First deploy (§4). Then create the admin once: `fly ssh console -a markethub-api -C "node ./node_modules/.bin/tsx prisma/seed.ts"` with `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` set for that command only.
+8. DNS: apex → web, `api.` → API. Confirm `/robots.txt` allows crawling only on the real https domain.
 
 ## 4. Deploying
 
@@ -117,5 +119,4 @@ Do the same for web if needed (web first if only the UI is broken). Database cha
 
 ## 10. Known gaps before launch
 
-- **Phone verification** needs an SMS provider (none is in the stack yet); until then it reports "coming soon" in production.
 - **Push notifications** (FCM) and device tokens are not built yet; users get in-app and email notifications.
