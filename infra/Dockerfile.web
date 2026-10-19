@@ -23,8 +23,10 @@ ARG API_URL
 ARG WEB_URL
 ARG NEXT_PUBLIC_SENTRY_DSN=""
 ARG GIT_SHA=""
+# production | staging. robots.txt is generated at build time, so this decides crawlability.
+ARG DEPLOY_ENV=production
 ENV API_URL=$API_URL WEB_URL=$WEB_URL NEXT_PUBLIC_SENTRY_DSN=$NEXT_PUBLIC_SENTRY_DSN \
-    NEXT_PUBLIC_GIT_SHA=$GIT_SHA GIT_SHA=$GIT_SHA
+    NEXT_PUBLIC_GIT_SHA=$GIT_SHA GIT_SHA=$GIT_SHA DEPLOY_ENV=$DEPLOY_ENV
 RUN test -n "$API_URL" -a -n "$WEB_URL" || (echo "API_URL and WEB_URL build args are required" && exit 1)
 RUN pnpm turbo run build --filter=web
 

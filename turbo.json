@@ -19,7 +19,8 @@
         "API_INTERNAL_URL",
         "WEB_URL",
         "GIT_SHA",
-        "NEXT_OUTPUT"
+        "NEXT_OUTPUT",
+        "DEPLOY_ENV"
       ]
     },
     "dev": {
