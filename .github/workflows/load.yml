@@ -77,9 +77,11 @@ jobs:
 
       - name: Measure the round trip to staging
         run: |
-          # Median TCP connect time ≈ one round trip; lib/ramp.js adds it to latency budgets.
-          ms=$(for i in $(seq 9); do curl -s -o /dev/null -w '%{time_connect}\n' "$API_URL/health"; done \
-            | sort -n | sed -n 5p | awk '{ printf "%d", $1 * 1000 }')
+          # Median request → first byte on /health, connection setup excluded. Not TCP connect
+          # time: Fly's anycast edge answers that next to the runner, while requests still
+          # travel on to jnb. lib/ramp.js adds this to latency budgets.
+          ms=$(for i in $(seq 9); do curl -s -o /dev/null -w '%{time_pretransfer} %{time_starttransfer}\n' "$API_URL/health"; done \
+            | awk '{ printf "%d\n", ($2 - $1) * 1000 }' | sort -n | sed -n 5p)
           echo "RTT_MS=$ms" >> "$GITHUB_ENV"
           echo "Round trip from this runner to staging: **${ms} ms**, added to each latency budget." >> "$GITHUB_STEP_SUMMARY"
 

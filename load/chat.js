@@ -2,7 +2,7 @@ import { check } from 'k6';
 import { Counter, Trend } from 'k6/metrics';
 import ws from 'k6/ws';
 import { API, data, tokenFor } from './lib/env.js';
-import { budget, limit, PEAK, steps } from './lib/ramp.js';
+import { budget, latency, limit, PEAK, steps } from './lib/ramp.js';
 
 /**
  * Real-time chat under load. VUs pair up on the seeded conversations (even VU
@@ -32,10 +32,10 @@ export const options = {
         },
   },
   thresholds: {
-    chat_ack_ms: [limit(`p(95)<${budget(250)}`)],
-    chat_delivery_ms: [limit(`p(95)<${budget(500)}`)],
+    chat_ack_ms: latency(`p(95)<${budget(250)}`),
+    chat_delivery_ms: latency(`p(95)<${budget(500)}`),
     chat_errors: [limit('count<10')],
-    ws_connecting: [limit(`p(95)<${budget(1000, 3)}`)],
+    ws_connecting: latency(`p(95)<${budget(1000, 3)}`),
   },
 };
 

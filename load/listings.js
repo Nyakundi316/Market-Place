@@ -2,7 +2,7 @@ import { check, group, sleep } from 'k6';
 import http from 'k6/http';
 import { Trend } from 'k6/metrics';
 import { API, auth, data, tokenFor } from './lib/env.js';
-import { budget, limit, PEAK, steps } from './lib/ramp.js';
+import { budget, latency, limit, PEAK, steps } from './lib/ramp.js';
 
 /**
  * Browsing as signed-in users: feed → search → listing → sometimes save it.
@@ -34,9 +34,9 @@ export const options = {
       },
   thresholds: {
     http_req_failed: [limit('rate<0.01')],
-    'http_req_duration{name:feed}': [limit(`p(95)<${budget(400)}`)],
-    'http_req_duration{name:search}': [limit(`p(95)<${budget(600)}`)], // FTS + trigram
-    'http_req_duration{name:listing}': [limit(`p(95)<${budget(300)}`)],
+    'http_req_duration{name:feed}': latency(`p(95)<${budget(400)}`),
+    'http_req_duration{name:search}': latency(`p(95)<${budget(600)}`), // FTS + trigram
+    'http_req_duration{name:listing}': latency(`p(95)<${budget(300)}`),
     checks: ['rate>0.99'],
   },
 };

@@ -34,3 +34,9 @@ export function steps(peak, hold = '2m') {
  */
 export const limit = (expr) =>
   PEAK ? { threshold: expr, abortOnFail: true, delayAbortEval: '1m' } : expr;
+
+/**
+ * Latency thresholds, except in SMOKE runs: those check the wiring with a handful of
+ * cold requests, where p95 is just the slowest one. Errors and checks still grade them.
+ */
+export const latency = (expr) => (__ENV.SMOKE ? [] : [limit(expr)]);
