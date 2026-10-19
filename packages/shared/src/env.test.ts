@@ -57,6 +57,31 @@ describe('parseEnv', () => {
     ).toBeUndefined();
   });
 
+  it('refuses hand-pasted keys that are clearly broken', () => {
+    const issues = (extra: Record<string, string>) => {
+      try {
+        parseEnv({ ...valid, ...extra });
+        return '';
+      } catch (e) {
+        return String(e);
+      }
+    };
+    // What a Ctrl+V into PowerShell Read-Host actually stored: one control character.
+    expect(issues({ S3_ACCESS_KEY: '' })).toMatch(/S3_ACCESS_KEY: looks truncated/);
+    expect(issues({ S3_SECRET_KEY: 'x' })).toMatch(/S3_SECRET_KEY: looks truncated/);
+    expect(issues({ S3_ENDPOINT: 'x' })).toMatch(/S3_ENDPOINT/);
+    expect(issues({ PAYSTACK_SECRET_KEY: 'x' })).toMatch(/PAYSTACK_SECRET_KEY: must be a Paystack/);
+    expect(issues({ RESEND_API_KEY: 're_ abc def' })).toMatch(/RESEND_API_KEY/);
+    expect(
+      issues({
+        S3_ENDPOINT: 'https://acct.r2.cloudflarestorage.com',
+        S3_ACCESS_KEY: 'a1b2c3d4e5f60718293a4b5c6d7e8f',
+        PAYSTACK_SECRET_KEY: 'sk_test_0123456789abcdef',
+        PAYSTACK_WEBHOOK_SECRET: 'sk_test_0123456789abcdef',
+      }),
+    ).toBe('');
+  });
+
   it('requires payment, storage and mail keys plus https in production', () => {
     let message = '';
     try {

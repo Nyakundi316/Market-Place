@@ -17,6 +17,15 @@ const optional = z
 
 const secret = z.string().min(32, 'must be at least 32 characters (§9)');
 
+// Third-party keys pasted by hand. A one-character value (a terminal turned Ctrl+V into
+// a control character) once booted fine and only failed at the first upload or payment.
+const credential = optional.pipe(
+  z
+    .string()
+    .regex(/^[\x21-\x7e]{8,}$/, 'looks truncated, or has spaces or control characters')
+    .optional(),
+);
+
 const base = z.object({
   NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
   PORT: z.coerce.number().int().positive().default(3001),
@@ -38,10 +47,10 @@ const base = z.object({
   GITHUB_CLIENT_ID: optional,
   GITHUB_CLIENT_SECRET: optional,
 
-  S3_ENDPOINT: optional,
+  S3_ENDPOINT: optional.pipe(z.string().url().optional()),
   S3_BUCKET: optional,
-  S3_ACCESS_KEY: optional,
-  S3_SECRET_KEY: optional,
+  S3_ACCESS_KEY: credential,
+  S3_SECRET_KEY: credential,
   S3_REGION: z.string().default('auto'),
   // Documented extra: where uploaded objects are read from (CDN / R2 public domain).
   // Defaults to path-style ${S3_ENDPOINT}/${S3_BUCKET}, which is what MinIO serves.
@@ -49,10 +58,18 @@ const base = z.object({
   // Documented extra: verification documents live here, never publicly readable.
   S3_PRIVATE_BUCKET: optional,
 
-  PAYSTACK_SECRET_KEY: optional,
-  PAYSTACK_WEBHOOK_SECRET: optional,
+  PAYSTACK_SECRET_KEY: optional.pipe(
+    z
+      .string()
+      .regex(
+        /^sk_(test|live)_[A-Za-z0-9]+$/,
+        'must be a Paystack secret key (sk_test_… or sk_live_…)',
+      )
+      .optional(),
+  ),
+  PAYSTACK_WEBHOOK_SECRET: credential,
 
-  RESEND_API_KEY: optional,
+  RESEND_API_KEY: credential,
   SMTP_HOST: z.string().default('localhost'),
   SMTP_PORT: z.coerce.number().int().positive().default(1025),
   MAIL_FROM: z.string().default('MarketHub <no-reply@markethub.local>'),
