@@ -69,7 +69,7 @@ jobs:
           users=$(( CHAT > BROWSE ? CHAT : BROWSE ))
           [ "$MODE" = smoke ] && users=10
           # One ssh call, so the seed and the read happen on the same machine.
-          flyctl ssh console -a "$APP" -C "sh -c 'cd /app && node ./node_modules/.bin/tsx prisma/seed-load.ts --users $users --out /tmp/fixtures.json 1>&2 && cat /tmp/fixtures.json'" > load/fixtures.json
+          flyctl ssh console -a "$APP" -C "sh -c 'cd /app && node ./node_modules/tsx/dist/cli.mjs prisma/seed-load.ts --users $users --out /tmp/fixtures.json 1>&2 && cat /tmp/fixtures.json'" > load/fixtures.json
           jq -e '.users | length > 0' load/fixtures.json > /dev/null
           jq -c '{users: (.users | length), conversations: (.conversations | length)}' load/fixtures.json
 
@@ -91,7 +91,7 @@ jobs:
 
       - name: Remove load-test users
         if: always()
-        run: flyctl ssh console -a "$APP" -C "sh -c 'cd /app && node ./node_modules/.bin/tsx prisma/seed-load.ts --clean'"
+        run: flyctl ssh console -a "$APP" -C "sh -c 'cd /app && node ./node_modules/tsx/dist/cli.mjs prisma/seed-load.ts --clean'"
 
       - uses: actions/upload-artifact@v4
         if: always()

@@ -143,9 +143,8 @@ jobs:
       # seed:load before it touches a database.
       - name: Seed scripts run inside the API image
         run: |
-          out=$(docker run --rm markethub-api:ci node ./node_modules/.bin/tsx prisma/seed-load.ts 2>&1 || true)
-          echo "$out" | tail -3
-          echo "$out" | grep -q 'Refusing to seed load-test users in production'
+          out=$(docker run --rm markethub-api:ci node ./node_modules/tsx/dist/cli.mjs prisma/seed-load.ts 2>&1 || true)
+          echo "$out" | grep -q 'Refusing to seed load-test users in production' || { echo "$out"; exit 1; }
       - name: Build web image
         uses: docker/build-push-action@v6
         with:

@@ -41,7 +41,11 @@ Web secrets: `INTERNAL_API_KEY`, `SENTRY_DSN`. Build-time (public) values come f
 4. Paystack: enable transfers; webhook URL `https://<api>/webhooks/paystack`; set `PAYSTACK_WEBHOOK_SECRET`.
 5. Africa's Talking: create the live app, top up SMS credit, and apply for an alphanumeric sender id (e.g. `MARKETHUB`; approval takes days per country). Set the `AFRICASTALKING_*` secrets. A low balance shows up as 503s on `/me/phone/send-code` and `InsufficientBalance` warnings in the API log.
 6. Web Push: `npx web-push generate-vapid-keys` once; set `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` on the API and store the pair in your password manager. Never rotate casually: every existing browser subscription stops working and users have to switch push back on.
-7. First deploy (§4). Then create the admin once: `fly ssh console -a markethub-api -C "node ./node_modules/.bin/tsx prisma/seed.ts"` with `SEED_ADMIN_EMAIL` / `SEED_ADMIN_PASSWORD` set for that command only.
+7. First deploy (§4). Then create the admin once, with the credentials set for that command only (use a throwaway password and change it after the first sign-in, since it lands in your shell history):
+   ```bash
+   fly ssh console -a markethub-api -C "sh -c 'cd /app && SEED_ADMIN_EMAIL=you@… SEED_ADMIN_PASSWORD=… node ./node_modules/tsx/dist/cli.mjs prisma/seed.ts'"
+   ```
+   (Not `.bin/tsx`: pnpm makes that a shell script, which `node` can't run.)
 8. DNS: apex → web, `api.` → API. Confirm `/robots.txt` allows crawling only on the real https domain.
 
 ## 4. Deploying
@@ -139,7 +143,7 @@ The production apps and configs with a `-staging` suffix: `markethub-api-staging
 **Load test:** Actions → **Load test (staging)**. Run *smoke* first: it seeds 10 users and proves tokens, search and sockets work end to end. Then *ramp*: browsing climbs to `browse_peak` users and chat to `chat_peak`, in fifths, two minutes per step, and each stops at the first step that breaks a threshold. The run's summary page shows each result; `vus` max is roughly the level it held. Latency budgets include the runner's measured round trip to `jnb`, since GitHub's runners are far away. Load users are removed at the end even when a run fails; after a hard cancel:
 
 ```bash
-fly ssh console -a markethub-api-staging -C "sh -c 'cd /app && node ./node_modules/.bin/tsx prisma/seed-load.ts --clean'"
+fly ssh console -a markethub-api-staging -C "sh -c 'cd /app && node ./node_modules/tsx/dist/cli.mjs prisma/seed-load.ts --clean'"
 ```
 
 **Between load tests** staging can idle on one API machine (`fly scale count 1 -a markethub-api-staging`). Scale back to 2 before a ramp run, because cross-machine fan-out is part of what it tests.
