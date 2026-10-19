@@ -134,8 +134,18 @@ jobs:
           context: .
           file: infra/Dockerfile.api
           push: false
+          load: true
+          tags: markethub-api:ci
           cache-from: type=gha,scope=api
           cache-to: type=gha,mode=max,scope=api
+      # The runbook's one-off commands (admin seed, load seed) run inside this image via
+      # `fly ssh`. tsx must ship in it, and the image's NODE_ENV=production must stop
+      # seed:load before it touches a database.
+      - name: Seed scripts run inside the API image
+        run: |
+          out=$(docker run --rm markethub-api:ci node ./node_modules/.bin/tsx prisma/seed-load.ts 2>&1 || true)
+          echo "$out" | tail -3
+          echo "$out" | grep -q 'Refusing to seed load-test users in production'
       - name: Build web image
         uses: docker/build-push-action@v6
         with:
