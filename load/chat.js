@@ -2,6 +2,7 @@ import { check } from 'k6';
 import { Counter, Trend } from 'k6/metrics';
 import ws from 'k6/ws';
 import { API, data, tokenFor } from './lib/env.js';
+import { budget, limit, PEAK, steps } from './lib/ramp.js';
 
 /**
  * Real-time chat under load. VUs pair up on the seeded conversations (even VU
@@ -13,20 +14,28 @@ import { API, data, tokenFor } from './lib/env.js';
  * the other side (Redis adapter fan-out across instances).
  *
  *   k6 run -e API_URL=https://api.staging… -e JWT_ACCESS_SECRET=… load/chat.js
+ *   … -e PEAK=1000 load/chat.js     ramp until something breaks (lib/ramp.js)
  */
 export const options = {
   scenarios: {
-    chat: {
-      executor: 'constant-vus',
-      vus: Number(__ENV.VUS || (__ENV.SMOKE ? 2 : 100)), // keep even: two per conversation
-      duration: __ENV.DURATION || (__ENV.SMOKE ? '15s' : '5m'),
-    },
+    chat: PEAK
+      ? {
+          executor: 'ramping-vus',
+          startVUs: 0,
+          stages: steps(PEAK, __ENV.HOLD),
+          gracefulRampDown: '70s', // longer than one 60 s session, so ramp-down doesn't cut sockets
+        }
+      : {
+          executor: 'constant-vus',
+          vus: Number(__ENV.VUS || (__ENV.SMOKE ? 2 : 100)), // keep even: two per conversation
+          duration: __ENV.DURATION || (__ENV.SMOKE ? '15s' : '5m'),
+        },
   },
   thresholds: {
-    chat_ack_ms: ['p(95)<250'],
-    chat_delivery_ms: ['p(95)<500'],
-    chat_errors: ['count<10'],
-    ws_connecting: ['p(95)<1000'],
+    chat_ack_ms: [limit(`p(95)<${budget(250)}`)],
+    chat_delivery_ms: [limit(`p(95)<${budget(500)}`)],
+    chat_errors: [limit('count<10')],
+    ws_connecting: [limit(`p(95)<${budget(1000, 3)}`)],
   },
 };
 
