@@ -55,6 +55,9 @@ test('the landing hands off to the sign-up card; its tabs keep ?next', async ({ 
   await expect(page.getByRole('link', { name: 'Forgot password?' })).toBeVisible();
 
   await tabs.getByRole('link', { name: 'Sign up' }).click();
+  // The log-in card also has an Email field; filling before the swap types into the old form.
+  await expect(page).toHaveURL(/\/signup\?next=%2Fcreate$/);
+  await expect(page.getByRole('heading', { name: 'Create your account' })).toBeVisible();
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password', { exact: true }).fill('correct horse battery');
   await page.getByRole('button', { name: 'Create account' }).click();
