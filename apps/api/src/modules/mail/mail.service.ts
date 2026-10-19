@@ -10,6 +10,11 @@ export interface MailMessage {
   html: string;
 }
 
+// Reserved names that can never receive mail (RFC 2606 / 6761). Load-test users on
+// staging live under .test; sending them through Resend would only burn the
+// sending domain's reputation on bounces.
+const UNDELIVERABLE = /(^|\.)(test|example|invalid|localhost|local)$/i;
+
 /**
  * Resend in production (plain HTTPS call, no SDK); SMTP → Mailhog everywhere
  * else. Notification mail goes through the email:send queue (NotificationsService);
@@ -29,6 +34,10 @@ export class MailService {
   async send(msg: MailMessage): Promise<void> {
     if (this.smtp) {
       await this.smtp.sendMail({ from: this.env.MAIL_FROM, ...msg });
+      return;
+    }
+    if (UNDELIVERABLE.test(msg.to.split('@').pop() ?? '')) {
+      this.logger.debug({ subject: msg.subject }, 'Skipped mail to a reserved domain');
       return;
     }
     const res = await fetch('https://api.resend.com/emails', {
