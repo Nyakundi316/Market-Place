@@ -68,8 +68,10 @@ jobs:
           # One user per VU keeps per-user rate limits realistic; chat pairs them up.
           users=$(( CHAT > BROWSE ? CHAT : BROWSE ))
           [ "$MODE" = smoke ] && users=10
-          # One ssh call, so the seed and the read happen on the same machine.
-          flyctl ssh console -a "$APP" -C "sh -c 'cd /app && node ./node_modules/tsx/dist/cli.mjs prisma/seed-load.ts --users $users --out /tmp/fixtures.json 1>&2 && cat /tmp/fixtures.json'" > load/fixtures.json
+          # One ssh call, so the seed and the read happen on the same machine. flyctl prints
+          # "No machine specified, using …" on stdout first, so keep from the JSON's opening "{".
+          flyctl ssh console -a "$APP" -C "sh -c 'cd /app && node ./node_modules/tsx/dist/cli.mjs prisma/seed-load.ts --users $users --out /tmp/fixtures.json 1>&2 && cat /tmp/fixtures.json'" \
+            | sed -n '/^{/,$p' > load/fixtures.json
           jq -e '.users | length > 0' load/fixtures.json > /dev/null
           jq -c '{users: (.users | length), conversations: (.conversations | length)}' load/fixtures.json
 
