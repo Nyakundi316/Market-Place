@@ -175,8 +175,9 @@ Accounts and keys only — no open feature decisions. Details in `docs/RUNBOOK.m
 - [x] Paystack test key on staging (both names, same value). The first test key was printed by a PowerShell error during setup and was regenerated in Paystack
 - [x] R2 buckets `markethub-staging` (public, r2.dev URL) + `markethub-staging-private` (no public access), CORS for the staging web origin on both, an Object Read & Write token scoped to the two buckets; Resend key; `MAIL_FROM` = `onboarding@resend.dev` (delivers only to the Resend account owner until a domain is verified)
 - [x] **Staging deployed 2026-10-19** (run 39252815420): API on 2 machines in jnb, `/health` postgres + redis up; web at https://markethub-web-staging.fly.dev, `robots.txt` = `Disallow: /`
-- [ ] Seed staging (categories + admin) over `fly ssh` with `SEED_ADMIN_*` set for that command only (RUNBOOK §3.7 with `-a markethub-api-staging`)
-- [ ] Load test (staging): smoke, then ramp
+- [x] Staging seeded: 55 categories + an admin created with a random password nobody saw (set your own via Forgot password). **Open:** the admin email must be moved to the Resend account address, since `onboarding@resend.dev` only delivers there
+- [x] Load test smoke passed (run 39257030313): 0 errors, chat ack ~300 ms from a US runner (~290 ms of it distance). Fixed on the way: flyctl's stdout banner broke fixtures.json; the round trip was measured to Fly's nearest edge instead of jnb
+- [ ] Load test ramp (run 39257269793, browse 300 / chat 1000): running
 - [ ] **Decision for production**: Fly Managed Postgres isn't offered in `jnb` (nearest: ams/fra/lhr). Options: self-run Fly Postgres in jnb (we own backups and failover; RUNBOOK §8 assumes point-in-time recovery), a managed Postgres in South Africa from another provider, or moving the stack to Europe
 
 Local dev: `.env` now has a dev-only VAPID pair (push works with `pnpm build && pnpm start`; the service worker isn't registered under `pnpm dev`). For SMS locally, put the Africa's Talking sandbox username `sandbox` + its key in `.env`, or leave blank to read codes from the Redis outbox / API log.
