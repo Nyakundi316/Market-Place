@@ -161,7 +161,7 @@ Accounts and keys only — no open feature decisions. Details in `docs/RUNBOOK.m
 - [ ] `INTERNAL_API_KEY`, `JWT_*` (generate), `WEB_URL`/`API_URL`
 - [ ] R2: public + private buckets, CORS for `WEB_URL`
 - [ ] Resend: verify the sending domain, set `MAIL_FROM`
-- [ ] Paystack live: `PAYSTACK_SECRET_KEY`, `PAYSTACK_WEBHOOK_SECRET`; webhook → `{API_URL}/webhooks/paystack`; enable transfers
+- [ ] Paystack live: `PAYSTACK_SECRET_KEY` and `PAYSTACK_WEBHOOK_SECRET` (same value: Paystack signs webhooks with the secret key); webhook → `{API_URL}/webhooks/paystack`; enable transfers
 - [ ] Africa's Talking: live app + SMS credit, apply for a `MARKETHUB` sender id (takes days), `AFRICASTALKING_*`
 - [ ] Web Push: `npx web-push generate-vapid-keys` once → `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`; keep the pair safe (rotating it kills every subscription)
 - [ ] OAuth (optional): Google + GitHub client ids/secrets
@@ -172,7 +172,8 @@ Accounts and keys only — no open feature decisions. Details in `docs/RUNBOOK.m
 - [x] Staging Postgres 16: `markethub-db-staging` in `jnb` (self-run Fly Postgres, 1 node, 1 GB, 10 GB disk), attached to the API (`DATABASE_URL` set). Choice 2026-10-19: self-run, all in jnb, ~$10/month with Redis
 - [x] Staging Redis `markethub-redis-staging` running in `jnb` (redis 7.4, AOF on a 1 GB volume, noeviction, no public IPs); config `infra/fly/redis-staging.toml`
 - [x] `bash infra/fly/set-staging-secrets.sh` run 2026-10-19 08:18: JWT pair, `INTERNAL_API_KEY` (both apps), VAPID, `REDIS_URL` / `REDIS_PASSWORD`, and the k6 `JWT_ACCESS_SECRET` on GitHub (placeholder replaced). API/web secrets stay staged until their first deploy
-- [ ] Paystack test keys, staging R2 buckets, Resend key (RUNBOOK §11); the API won't boot without them → Deploy → staging
+- [x] Paystack test key on staging (both names, same value). The first test key was printed by a PowerShell error during setup and was regenerated in Paystack
+- [ ] R2: buckets `markethub-staging` (public) + `markethub-staging-private`, a read/write token → `S3_*`; Resend → `RESEND_API_KEY` (+ `S3_PUBLIC_URL`, `MAIL_FROM`). The API won't boot without them → Deploy → staging
 - [ ] **Decision for production**: Fly Managed Postgres isn't offered in `jnb` (nearest: ams/fra/lhr). Options: self-run Fly Postgres in jnb (we own backups and failover; RUNBOOK §8 assumes point-in-time recovery), a managed Postgres in South Africa from another provider, or moving the stack to Europe
 - [ ] Load test (staging): smoke, then ramp; note what `vus` max held and which threshold broke first
 

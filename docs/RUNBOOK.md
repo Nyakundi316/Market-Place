@@ -25,7 +25,7 @@ Set API secrets with `fly secrets set -a markethub-api KEY=value …` (each set 
 - `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET` — ≥ 32 chars, different from each other
 - `INTERNAL_API_KEY` — same value on **web and API**; lets server-rendered pages skip the per-IP limit
 - `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY`, `S3_SECRET_KEY`, `S3_PRIVATE_BUCKET` (+ `S3_PUBLIC_URL`)
-- `PAYSTACK_SECRET_KEY`, `PAYSTACK_WEBHOOK_SECRET`
+- `PAYSTACK_SECRET_KEY`, `PAYSTACK_WEBHOOK_SECRET`: the **same** value. Paystack has no separate webhook secret; it signs webhooks with the secret key, which the API checks against `PAYSTACK_WEBHOOK_SECRET`
 - `RESEND_API_KEY`, `MAIL_FROM`
 - `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` (+ `VAPID_SUBJECT`, defaults to `mailto:` + `MAIL_FROM`'s address) — Web Push; without them push is off. **Generate once and keep**: a new pair silently invalidates every browser's subscription
 - `AFRICASTALKING_USERNAME`, `AFRICASTALKING_API_KEY` (+ `AFRICASTALKING_SENDER_ID`) — without them phone verification shows as unavailable
@@ -38,7 +38,7 @@ Web secrets: `INTERNAL_API_KEY`, `SENTRY_DSN`. Build-time (public) values come f
 1. `fly apps create markethub-api` and `markethub-web`; provision Postgres and Redis; set secrets (§2).
 2. R2: two buckets. Public one behind a custom domain; private one with public access **off**. CORS on both for `WEB_URL` (PUT, GET; header `content-type`).
 3. Resend: verify the sending domain; set `MAIL_FROM`.
-4. Paystack: enable transfers; webhook URL `https://<api>/webhooks/paystack`; set `PAYSTACK_WEBHOOK_SECRET`.
+4. Paystack: enable transfers; webhook URL `https://<api>/webhooks/paystack`; set `PAYSTACK_WEBHOOK_SECRET` to the secret key (§2).
 5. Africa's Talking: create the live app, top up SMS credit, and apply for an alphanumeric sender id (e.g. `MARKETHUB`; approval takes days per country). Set the `AFRICASTALKING_*` secrets. A low balance shows up as 503s on `/me/phone/send-code` and `InsufficientBalance` warnings in the API log.
 6. Web Push: `npx web-push generate-vapid-keys` once; set `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` on the API and store the pair in your password manager. Never rotate casually: every existing browser subscription stops working and users have to switch push back on.
 7. First deploy (§4). Then create the admin once, with the credentials set for that command only (use a throwaway password and change it after the first sign-in, since it lands in your shell history):
