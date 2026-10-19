@@ -52,6 +52,11 @@ export class UploadsService implements OnModuleInit {
             region: env.S3_REGION,
             forcePathStyle: true, // R2, MinIO and SeaweedFS all accept path style
             credentials: { accessKeyId: S3_ACCESS_KEY, secretAccessKey: S3_SECRET_KEY },
+            // SDK ≥3.729 otherwise signs a CRC32 into every presigned PUT, computed over
+            // an empty body (the photo doesn't exist yet), and R2/S3 reject the real upload
+            // as a checksum mismatch. SeaweedFS ignores it, which is why local tests passed.
+            requestChecksumCalculation: 'WHEN_REQUIRED',
+            responseChecksumValidation: 'WHEN_REQUIRED',
           })
         : null;
   }
