@@ -170,9 +170,8 @@ Accounts and keys only — no open feature decisions. Details in `docs/RUNBOOK.m
 - [x] GitHub environment `staging` with `API_URL` / `WEB_URL` (the fly.dev URLs). `production` environment not created yet
 - [x] Payment method on Fly (the "unauthorized" on `fly secrets list` was billing; it works since the card was added)
 - [x] Staging Postgres 16: `markethub-db-staging` in `jnb` (self-run Fly Postgres, 1 node, 1 GB, 10 GB disk), attached to the API (`DATABASE_URL` set). Choice 2026-10-19: self-run, all in jnb, ~$10/month with Redis
-- [x] Staging Redis app `markethub-redis-staging` + 1 GB volume in `jnb`; config `infra/fly/redis-staging.toml`, not deployed yet
-- [ ] `bash infra/fly/set-staging-secrets.sh` (JWT pair, `INTERNAL_API_KEY`, VAPID, Redis password + `REDIS_URL`, and the k6 `JWT_ACCESS_SECRET` on GitHub). The GitHub `staging` secret `JWT_ACCESS_SECRET` set on 2026-10-19 is a placeholder from a failed run and must be overwritten by this script
-- [ ] Deploy Redis: `fly deploy --config infra/fly/redis-staging.toml --ha=false` (after the script, so the password is in place)
+- [x] Staging Redis `markethub-redis-staging` running in `jnb` (redis 7.4, AOF on a 1 GB volume, noeviction, no public IPs); config `infra/fly/redis-staging.toml`
+- [x] `bash infra/fly/set-staging-secrets.sh` run 2026-10-19 08:18: JWT pair, `INTERNAL_API_KEY` (both apps), VAPID, `REDIS_URL` / `REDIS_PASSWORD`, and the k6 `JWT_ACCESS_SECRET` on GitHub (placeholder replaced). API/web secrets stay staged until their first deploy
 - [ ] Paystack test keys, staging R2 buckets, Resend key (RUNBOOK §11); the API won't boot without them → Deploy → staging
 - [ ] **Decision for production**: Fly Managed Postgres isn't offered in `jnb` (nearest: ams/fra/lhr). Options: self-run Fly Postgres in jnb (we own backups and failover; RUNBOOK §8 assumes point-in-time recovery), a managed Postgres in South Africa from another provider, or moving the stack to Europe
 - [ ] Load test (staging): smoke, then ramp; note what `vus` max held and which threshold broke first

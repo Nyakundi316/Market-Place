@@ -15,9 +15,11 @@ primary_region = "jnb"
   destination = "/data"
 
 [processes]
-  # Through the image's entrypoint so Redis drops to its own user and owns /data.
+  # overcommit: AOF rewrites fork, and Redis warns they can fail without it (the machine is
+  # a VM, so the root shell may set it). Then through the image's entrypoint so Redis
+  # drops to its own user and owns /data.
   # noeviction: BullMQ must never lose queued jobs to memory pressure; writes fail instead.
-  app = "sh -c 'exec docker-entrypoint.sh redis-server --requirepass \"$REDIS_PASSWORD\" --dir /data --appendonly yes --maxmemory 150mb --maxmemory-policy noeviction'"
+  app = "sh -c 'sysctl -w vm.overcommit_memory=1 >/dev/null; exec docker-entrypoint.sh redis-server --requirepass \"$REDIS_PASSWORD\" --dir /data --appendonly yes --maxmemory 150mb --maxmemory-policy noeviction'"
 
 [[vm]]
   size = "shared-cpu-1x"
