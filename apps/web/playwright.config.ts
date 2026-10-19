@@ -21,11 +21,20 @@ export default defineConfig({
     screenshot: 'only-on-failure',
   },
   projects: [
-    { name: 'mobile', use: { ...devices['Pixel 7'] } }, // 412px — mobile-first (§0)
+    {
+      // §0's 375px floor (iPhone SE / mini). Pixel 7 keeps it on Chromium with touch;
+      // devices['iPhone SE'] would switch to WebKit, which CI doesn't install.
+      name: 'mobile',
+      use: { ...devices['Pixel 7'], viewport: { width: 375, height: 667 } },
+      testIgnore: /responsive\.spec/,
+    },
     {
       name: 'desktop',
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },
+      testIgnore: /responsive\.spec/,
     },
+    // Sets its own widths (375/768/1280, §11), so it runs once rather than per project.
+    { name: 'responsive', use: { ...devices['Desktop Chrome'] }, testMatch: /responsive\.spec/ },
   ],
   webServer: [
     {

@@ -24,7 +24,7 @@ The browser only talks to `localhost:3000`; `/api/*` is proxied to Nest so auth 
 | --- | --- |
 | `pnpm test` | unit tests (shared, api, web) |
 | `pnpm test:e2e --filter api` | API e2e against `markethub_test` (migrated automatically) |
-| `pnpm --filter web test:e2e` | Playwright at 412px and 1280px; reuses running dev servers, but a production build (`pnpm --filter web build && pnpm --filter web start`) is much faster on slow machines |
+| `pnpm --filter web test:e2e` | Playwright at 375px and 1280px, plus a layout sweep of every main page at 375/768/1280 (`e2e/responsive.spec.ts`); reuses running dev servers, but a production build (`pnpm --filter web build && pnpm --filter web start`) is much faster on slow machines |
 | `pnpm lint` / `pnpm typecheck` | 0 warnings / 0 errors is the bar (§11) |
 
 CI (`.github/workflows/ci.yml`) runs all of the above against throwaway Postgres, Redis and Mailhog services.
