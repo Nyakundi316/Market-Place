@@ -141,8 +141,23 @@ Tests: shared 68 · api unit 25 · api e2e 220 · web unit 29 · Playwright 34 (
 
 Tests (2026-10-19, local, prod builds): shared 73 · api unit 32 · api e2e 231 · web unit 32 · Playwright 42 (39 first run; the 3 failures above fixed and rerun green)
 
+## Shipped — Phase 8 (Launch readiness)
+Scope agreed 2026-10-19: merge the launch polish, screen sizes, staging + load test. **Meilisearch moved to "later"** (the brief's own word): Postgres search already handles typos in titles and is fine at launch scale; revisit for search-as-you-type, synonyms (simu → phone) or ~100k listings. **Swahili dropped** (owner's call).
+- **8.0** PR #1 (launch polish) merged, fast-forward. Its first CI run caught a real bug: the sending tab got its own `message:new` before the ack, so every sender briefly saw their message twice (the "known-flaky" chat test). The gateway now excludes the sending socket; the sender's other tabs still get it. Also a sign-up test race and two push spec type errors that only `tsc` saw
+- **8.1** Screen sizes (§0, §11): the mobile project runs at 375px (was 412); `e2e/responsive.spec.ts` visits every main screen (public, auth, onboarding, buyer/seller with a live chat thread, admin) at 375/768/1280 and fails on sideways scroll, anything past the right edge outside a scroll container, or a missing main nav. Every screen already fit; the detector was checked against an injected overflow
+- **8.2** Staging + load: **Deploy** takes staging|production (same Fly configs, `-staging` app suffix, 2 API machines; URLs from each GitHub environment, nothing per-environment in the toml files). **Load test (staging)** seeds users over `fly ssh`, measures the runner's round trip to jnb, ramps listings and/or chat, posts results to the run summary and always cleans up. k6 ramp mode: climb in fifths of `PEAK`, abort at the first broken threshold, `vus` max ≈ what it held. RUNBOOK §11
+
+Fixes found on the way:
+- `robots.txt` would have let staging be indexed (production build on https). `DEPLOY_ENV` build arg, declared in turbo.json (strict env mode would hide it from `next build`)
+- `tsx` was a dev dependency, so the deployed image couldn't run RUNBOOK §3.7's admin seed. Now a runtime dependency, and CI runs `seed-load.ts` inside the built image to prove both that and its production guard
+- Mail to reserved domains (`.test`, `.example`, `.invalid`, `.localhost`, `.local`) never reaches Resend. Load users would otherwise have bounced thousands of offline-notify emails off the sending domain
+- k6 listings favourited the VU's own listing; the correct 400 counted in `http_req_failed` and would stop ramp runs
+- `seed:load` runs on staging only (needs `DEPLOY_ENV=staging` under `NODE_ENV=production`) and takes `--out`
+
+Tests (2026-10-19): shared 73 · api unit 35 · api e2e 232 · web unit 35 · Playwright 46 (mobile 21 at 375px + desktop 21 + responsive 4). k6 ramp checked locally through `grafana/k6` at PEAK=12
+
 ## Before launch (everything)
-Accounts and keys only — no open feature decisions. Details in `docs/RUNBOOK.md` §2–3.
+Accounts and keys only — no open feature decisions. Details in `docs/RUNBOOK.md` §2–3 (production) and §11 (staging).
 - [ ] `INTERNAL_API_KEY`, `JWT_*` (generate), `WEB_URL`/`API_URL`
 - [ ] R2: public + private buckets, CORS for `WEB_URL`
 - [ ] Resend: verify the sending domain, set `MAIL_FROM`
@@ -150,8 +165,10 @@ Accounts and keys only — no open feature decisions. Details in `docs/RUNBOOK.m
 - [ ] Africa's Talking: live app + SMS credit, apply for a `MARKETHUB` sender id (takes days), `AFRICASTALKING_*`
 - [ ] Web Push: `npx web-push generate-vapid-keys` once → `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`; keep the pair safe (rotating it kills every subscription)
 - [ ] OAuth (optional): Google + GitHub client ids/secrets
-- [ ] Fly: account, `FLY_API_TOKEN` secret, `API_URL`/`WEB_URL` repo variables for the Deploy workflow
-- [ ] k6 against staging at expected peak
+- [ ] Fly: account, `FLY_API_TOKEN` secret (allowed to `fly ssh` for the load test)
+- [ ] GitHub environments `staging` and `production`, each with `API_URL`/`WEB_URL`; staging also gets secret `JWT_ACCESS_SECRET`
+- [ ] Staging (RUNBOOK §11): apps, its own Postgres + Redis, test/sandbox keys, staging R2 buckets → Deploy → staging
+- [ ] Load test (staging): smoke, then ramp; note what `vus` max held and which threshold broke first
 
 Local dev: `.env` now has a dev-only VAPID pair (push works with `pnpm build && pnpm start`; the service worker isn't registered under `pnpm dev`). For SMS locally, put the Africa's Talking sandbox username `sandbox` + its key in `.env`, or leave blank to read codes from the Redis outbox / API log.
 
@@ -159,6 +176,7 @@ Local dev: `.env` now has a dev-only VAPID pair (push works with `pnpm build && 
 - `@RateLimit('auth')` (10/min/IP) covers credential endpoints only; refresh/logout/provider list are on the global limit (CGNAT would otherwise sign users out)
 - Locally the 8 GB machine swaps during E2E (argon2 + Chromium + Docker); `/health` hit 5s. Run E2E against `pnpm build` + `start`, not `pnpm dev`
 - Escrow model (Phase 5): charge now, platform holds the funds, Paystack transfer to the seller on release
-- `main` is pushed to `origin`; CI runs on every push. 2026-10-19 work is on branch `feat/launch-polish` (not pushed)
+- `main` is pushed to `origin`; CI runs on every push. Phase 8 is on `feat/phase-8` (PR to `main`)
+- Not verifiable without a Fly account: the Deploy/Load workflows' `flyctl` steps. Whether `fly deploy -e` overrides toml `[env]` is undocumented, so no value is set in both places; whether a deploy token may `fly ssh` is noted in RUNBOOK §11.5
 - Headless Chrome via Playwright: a `viewport` override on a persistent context breaks Cache Storage ("Entry already exists"); not an app bug, noted for anyone scripting push checks
 - Stitch MCP not connected; UI follows §6 + CLAUDE.md design rules directly
