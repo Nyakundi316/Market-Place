@@ -173,9 +173,11 @@ Accounts and keys only — no open feature decisions. Details in `docs/RUNBOOK.m
 - [x] Staging Redis `markethub-redis-staging` running in `jnb` (redis 7.4, AOF on a 1 GB volume, noeviction, no public IPs); config `infra/fly/redis-staging.toml`
 - [x] `bash infra/fly/set-staging-secrets.sh` run 2026-10-19 08:18: JWT pair, `INTERNAL_API_KEY` (both apps), VAPID, `REDIS_URL` / `REDIS_PASSWORD`, and the k6 `JWT_ACCESS_SECRET` on GitHub (placeholder replaced). API/web secrets stay staged until their first deploy
 - [x] Paystack test key on staging (both names, same value). The first test key was printed by a PowerShell error during setup and was regenerated in Paystack
-- [ ] R2: buckets `markethub-staging` (public) + `markethub-staging-private`, a read/write token → `S3_*`; Resend → `RESEND_API_KEY` (+ `S3_PUBLIC_URL`, `MAIL_FROM`). The API won't boot without them → Deploy → staging
+- [x] R2 buckets `markethub-staging` (public, r2.dev URL) + `markethub-staging-private` (no public access), CORS for the staging web origin on both, an Object Read & Write token scoped to the two buckets; Resend key; `MAIL_FROM` = `onboarding@resend.dev` (delivers only to the Resend account owner until a domain is verified)
+- [x] **Staging deployed 2026-10-19** (run 39252815420): API on 2 machines in jnb, `/health` postgres + redis up; web at https://markethub-web-staging.fly.dev, `robots.txt` = `Disallow: /`
+- [ ] Seed staging (categories + admin) over `fly ssh` with `SEED_ADMIN_*` set for that command only (RUNBOOK §3.7 with `-a markethub-api-staging`)
+- [ ] Load test (staging): smoke, then ramp
 - [ ] **Decision for production**: Fly Managed Postgres isn't offered in `jnb` (nearest: ams/fra/lhr). Options: self-run Fly Postgres in jnb (we own backups and failover; RUNBOOK §8 assumes point-in-time recovery), a managed Postgres in South Africa from another provider, or moving the stack to Europe
-- [ ] Load test (staging): smoke, then ramp; note what `vus` max held and which threshold broke first
 
 Local dev: `.env` now has a dev-only VAPID pair (push works with `pnpm build && pnpm start`; the service worker isn't registered under `pnpm dev`). For SMS locally, put the Africa's Talking sandbox username `sandbox` + its key in `.env`, or leave blank to read codes from the Redis outbox / API log.
 
