@@ -1,6 +1,8 @@
-# Fly.io — MarketHub web. Deploy from the repo root:
-#   fly deploy --config infra/fly/web.toml \
-#     --build-arg API_URL=https://api.markethub.example --build-arg WEB_URL=https://markethub.example
+# Fly.io — MarketHub web: app markethub-web (production) or markethub-web-staging.
+# Normally deployed by .github/workflows/deploy.yml; by hand, from the repo root:
+#   fly deploy --config infra/fly/web.toml -a <app> \
+#     -e WEB_URL=https://… -e API_INTERNAL_URL=http://<api app>.internal:3001 \
+#     --build-arg API_URL=https://… --build-arg WEB_URL=https://… --build-arg DEPLOY_ENV=production|staging
 # Secrets: INTERNAL_API_KEY (same as the API's), SENTRY_DSN.
 app = "markethub-web"
 primary_region = "jnb"
@@ -10,9 +12,8 @@ primary_region = "jnb"
 
 [env]
   NODE_ENV = "production"
-  WEB_URL = "https://markethub.example"
-  # Server-side calls go over Fly's private network, not the public internet.
-  API_INTERNAL_URL = "http://markethub-api.internal:3001"
+  # Per environment, so passed with `fly deploy -e`: WEB_URL, and API_INTERNAL_URL
+  # (http://<api app>.internal:3001) so server-side calls stay on Fly's private network.
 
 [http_service]
   internal_port = 3000

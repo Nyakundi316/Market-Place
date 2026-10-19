@@ -46,14 +46,16 @@ Web secrets: `INTERNAL_API_KEY`, `SENTRY_DSN`. Build-time (public) values come f
 
 ## 4. Deploying
 
-**Normal path:** GitHub → Actions → **Deploy** → *api-then-web*. It refuses unless CI is green on that commit, deploys the API (Fly runs `prisma migrate deploy` as the release command before any new machine takes traffic), then the web.
+**Normal path:** GitHub → Actions → **Deploy** → pick *staging* or *production* → *api-then-web*. It refuses unless CI is green on that commit, deploys the API (Fly runs `prisma migrate deploy` as the release command before any new machine takes traffic), then the web. URLs come from that GitHub environment's `API_URL` / `WEB_URL` variables; nothing environment-specific lives in the toml files.
 
-Manual equivalent:
+Manual equivalent (production; for staging add `-staging` to both app names and say `DEPLOY_ENV=staging`):
 
 ```bash
-fly deploy --config infra/fly/api.toml --remote-only
-fly deploy --config infra/fly/web.toml --remote-only \
-  --build-arg API_URL=https://api.<domain> --build-arg WEB_URL=https://<domain>
+fly deploy --config infra/fly/api.toml -a markethub-api --remote-only \
+  -e WEB_URL=https://<domain> -e API_URL=https://api.<domain> -e DEPLOY_ENV=production
+fly deploy --config infra/fly/web.toml -a markethub-web --remote-only \
+  -e WEB_URL=https://<domain> -e API_INTERNAL_URL=http://markethub-api.internal:3001 \
+  --build-arg API_URL=https://api.<domain> --build-arg WEB_URL=https://<domain> --build-arg DEPLOY_ENV=production
 ```
 
 **Migrations are forward-only.** Write them expand → deploy → contract: add the new column/table, ship code that writes both, backfill, and only drop the old thing in a later release. A migration that fails aborts the deploy; old machines keep serving.
@@ -114,9 +116,30 @@ Do the same for web if needed (web first if only the UI is broken). Database cha
 | --- | --- |
 | Every 90 days | Rotate JWT secrets (§9 of the brief) — plan for users being signed out |
 | Monthly | Dependency updates (`pnpm outdated`), review Sentry's top issues, check the dead-letter queue |
-| Before a big launch/promo | k6 on staging (`load/README.md`); watch API p95, Postgres CPU, Redis ops |
+| Before a big launch/promo | Actions → **Load test (staging)** (§11); watch API p95, Postgres CPU, Redis ops |
 | Quarterly | Backup restore drill; review admin accounts |
 
 ## 10. Known gaps before launch
 
-No feature gaps left in code. What remains is accounts and keys (§2, §3) and a k6 run against staging at expected peak; the checklist lives in `PROGRESS.md` → "Before launch".
+No feature gaps left in code. What remains is accounts and keys (§2, §3), standing up staging (§11) and a ramp run there; the checklist lives in `PROGRESS.md` → "Before launch".
+
+## 11. Staging
+
+The production apps and configs with a `-staging` suffix: `markethub-api-staging` (2 machines, like production, so sockets cross machines through the Redis adapter) and `markethub-web-staging`. It is a production build (`NODE_ENV=production`, every §2 key required) marked `DEPLOY_ENV=staging`. That marker keeps robots.txt closed to crawlers, and it's the only place `seed:load` agrees to run.
+
+**Set up once**
+
+1. `fly apps create markethub-api-staging` and `fly apps create markethub-web-staging`.
+2. Postgres and Redis **of its own**, never production's (same options as §1). Set `DATABASE_URL` and `REDIS_URL` on `markethub-api-staging`.
+3. The other §2 secrets, with test values: Paystack **test** keys (`sk_test_…`) and a test-mode webhook to `https://markethub-api-staging.fly.dev/webhooks/paystack`; `AFRICASTALKING_USERNAME=sandbox` with the sandbox key; a separate VAPID pair, separate JWT secrets and `INTERNAL_API_KEY` (same value on both staging apps); two staging R2 buckets set up as in §3.2. Resend can share production's key: load-test users are on a reserved `.test` domain and are never mailed.
+4. GitHub → Settings → Environments → **staging**: variables `API_URL=https://markethub-api-staging.fly.dev`, `WEB_URL=https://markethub-web-staging.fly.dev`; secret `JWT_ACCESS_SECRET` = the staging API's (k6 signs tokens with it). Give **production** its own `API_URL` / `WEB_URL`.
+5. `FLY_API_TOKEN` (repo secret, or per environment) must be allowed to deploy and, for the load test, to `fly ssh`. If the load workflow's seed step is refused, give the staging environment an org token (`fly tokens create org`) as its own `FLY_API_TOKEN`.
+6. Actions → **Deploy** → *staging*. Then create an admin as in §3.7 with `-a markethub-api-staging`.
+
+**Load test:** Actions → **Load test (staging)**. Run *smoke* first: it seeds 10 users and proves tokens, search and sockets work end to end. Then *ramp*: browsing climbs to `browse_peak` users and chat to `chat_peak`, in fifths, two minutes per step, and each stops at the first step that breaks a threshold. The run's summary page shows each result; `vus` max is roughly the level it held. Latency budgets include the runner's measured round trip to `jnb`, since GitHub's runners are far away. Load users are removed at the end even when a run fails; after a hard cancel:
+
+```bash
+fly ssh console -a markethub-api-staging -C "sh -c 'cd /app && node ./node_modules/.bin/tsx prisma/seed-load.ts --clean'"
+```
+
+**Between load tests** staging can idle on one API machine (`fly scale count 1 -a markethub-api-staging`). Scale back to 2 before a ramp run, because cross-machine fan-out is part of what it tests.

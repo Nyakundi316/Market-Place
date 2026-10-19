@@ -31,7 +31,7 @@ CI (`.github/workflows/ci.yml`) runs all of the above against throwaway Postgres
 
 ## Deploying
 
-Docker images (`infra/Dockerfile.api`, `infra/Dockerfile.web`) are built by CI on every push. Production runs on Fly.io (`infra/fly/*.toml`) via the manual **Deploy** workflow; migrations run as the release step. See [docs/RUNBOOK.md](docs/RUNBOOK.md) for setup, rollbacks and incident playbooks, and [load/README.md](load/README.md) for k6 load tests.
+Docker images (`infra/Dockerfile.api`, `infra/Dockerfile.web`) are built by CI on every push. Staging and production run on Fly.io (`infra/fly/*.toml`, one config for both) via the manual **Deploy** workflow; migrations run as the release step. **Load test (staging)** runs the k6 ramp against staging. See [docs/RUNBOOK.md](docs/RUNBOOK.md) for setup, rollbacks and incident playbooks, and [load/README.md](load/README.md) for k6 load tests.
 
 ## Environment
 

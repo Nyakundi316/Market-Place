@@ -1,0 +1,101 @@
+name: Load test (staging)
+
+# Manual, and staging only: the app name below is fixed, API_URL has to look
+# like staging, and seed-load refuses to run anywhere without DEPLOY_ENV=staging.
+# Seeds load-test users, runs browsing and/or chat, then removes the users
+# whatever happened. Results land on the run's summary page.
+#
+# Needs on the staging environment: variable API_URL, secrets FLY_API_TOKEN
+# (must be allowed to `fly ssh`) and JWT_ACCESS_SECRET (the staging API's, so k6
+# can sign tokens for the seeded users). See load/README.md.
+on:
+  workflow_dispatch:
+    inputs:
+      script:
+        description: What to run
+        type: choice
+        options: [both, listings, chat]
+        default: both
+      mode:
+        description: smoke = 2 users, checks the wiring; ramp = climb to the peaks until something breaks
+        type: choice
+        options: [smoke, ramp]
+        default: smoke
+      chat_peak:
+        description: Chat users connected at the top of the ramp
+        type: number
+        default: 1000
+      browse_peak:
+        description: Browsing users at the top of the ramp (each ≈ 0.5 requests/s)
+        type: number
+        default: 300
+
+concurrency:
+  group: load-staging
+  cancel-in-progress: false
+
+jobs:
+  load:
+    runs-on: ubuntu-latest
+    environment: staging
+    timeout-minutes: 75
+    env:
+      APP: markethub-api-staging
+      API_URL: ${{ vars.API_URL }}
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      JWT_ACCESS_SECRET: ${{ secrets.JWT_ACCESS_SECRET }}
+      MODE: ${{ inputs.mode }}
+    steps:
+      - name: Check the staging environment's settings
+        run: |
+          test -n "$API_URL" -a -n "$FLY_API_TOKEN" -a -n "$JWT_ACCESS_SECRET" || {
+            echo "::error::Set variable API_URL and secrets FLY_API_TOKEN, JWT_ACCESS_SECRET on the staging environment"
+            exit 1
+          }
+          case "$API_URL" in
+            *staging*) ;;
+            *) echo "::error::API_URL ($API_URL) doesn't look like staging; refusing to load-test it"; exit 1 ;;
+          esac
+      - uses: actions/checkout@v4
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - uses: grafana/setup-k6-action@v1
+
+      - name: Seed load-test users on staging
+        env:
+          CHAT: ${{ inputs.chat_peak }}
+          BROWSE: ${{ inputs.browse_peak }}
+        run: |
+          # One user per VU keeps per-user rate limits realistic; chat pairs them up.
+          users=$(( CHAT > BROWSE ? CHAT : BROWSE ))
+          [ "$MODE" = smoke ] && users=10
+          # One ssh call, so the seed and the read happen on the same machine.
+          flyctl ssh console -a "$APP" -C "sh -c 'cd /app && node ./node_modules/.bin/tsx prisma/seed-load.ts --users $users --out /tmp/fixtures.json 1>&2 && cat /tmp/fixtures.json'" > load/fixtures.json
+          jq -e '.users | length > 0' load/fixtures.json > /dev/null
+          jq -c '{users: (.users | length), conversations: (.conversations | length)}' load/fixtures.json
+
+      - name: Measure the round trip to staging
+        run: |
+          # Median TCP connect time ≈ one round trip; lib/ramp.js adds it to latency budgets.
+          ms=$(for i in $(seq 9); do curl -s -o /dev/null -w '%{time_connect}\n' "$API_URL/health"; done \
+            | sort -n | sed -n 5p | awk '{ printf "%d", $1 * 1000 }')
+          echo "RTT_MS=$ms" >> "$GITHUB_ENV"
+          echo "Round trip from this runner to staging: **${ms} ms**, added to each latency budget." >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Browsing (listings)
+        if: inputs.script != 'chat'
+        run: bash load/ci.sh listings "${{ inputs.browse_peak }}"
+
+      - name: Chat
+        if: inputs.script != 'listings' && !cancelled()
+        run: bash load/ci.sh chat "${{ inputs.chat_peak }}"
+
+      - name: Remove load-test users
+        if: always()
+        run: flyctl ssh console -a "$APP" -C "sh -c 'cd /app && node ./node_modules/.bin/tsx prisma/seed-load.ts --clean'"
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: k6-output
+          path: k6-*.txt
+          if-no-files-found: ignore

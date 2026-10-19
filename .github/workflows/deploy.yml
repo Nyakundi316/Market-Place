@@ -1,10 +1,17 @@
 name: Deploy
 
-# Manual: pick what to ship. Needs repo secret FLY_API_TOKEN and repo
-# variables API_URL / WEB_URL (public URLs baked into the web build).
+# Manual: pick where and what to ship. Needs repo secret FLY_API_TOKEN and, on
+# each GitHub environment (staging, production), variables API_URL / WEB_URL
+# (+ optional NEXT_PUBLIC_SENTRY_DSN). Staging is the same apps with a
+# -staging suffix (docs/RUNBOOK.md §11).
 on:
   workflow_dispatch:
     inputs:
+      environment:
+        description: Where to deploy
+        type: choice
+        options: [staging, production]
+        default: staging
       target:
         description: What to deploy
         type: choice
@@ -12,8 +19,12 @@ on:
         default: api-then-web
 
 concurrency:
-  group: deploy-production
+  group: deploy-${{ inputs.environment }}
   cancel-in-progress: false # never cut a deploy (or its migration) off halfway
+
+env:
+  DEPLOY_ENV: ${{ inputs.environment }}
+  SUFFIX: ${{ inputs.environment == 'staging' && '-staging' || '' }}
 
 jobs:
   ci-green:
@@ -33,12 +44,24 @@ jobs:
     needs: ci-green
     if: inputs.target != 'web'
     runs-on: ubuntu-latest
-    environment: production
+    environment: ${{ inputs.environment }}
+    env:
+      API_URL: ${{ vars.API_URL }}
+      WEB_URL: ${{ vars.WEB_URL }}
     steps:
+      - name: Check the environment's variables
+        run: |
+          test -n "$API_URL" -a -n "$WEB_URL" || {
+            echo "::error::Set API_URL and WEB_URL on the '$DEPLOY_ENV' environment (Settings → Environments)"
+            exit 1
+          }
       - uses: actions/checkout@v4
       - uses: superfly/flyctl-actions/setup-flyctl@master
       # The release_command in api.toml runs `prisma migrate deploy` before traffic moves.
-      - run: flyctl deploy --config infra/fly/api.toml --remote-only --env GIT_SHA=${{ github.sha }}
+      - run: >
+          flyctl deploy --config infra/fly/api.toml --app "markethub-api$SUFFIX" --remote-only
+          --env WEB_URL="$WEB_URL" --env API_URL="$API_URL"
+          --env DEPLOY_ENV="$DEPLOY_ENV" --env GIT_SHA="$GITHUB_SHA"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
 
@@ -47,15 +70,29 @@ jobs:
     # Web ships after the API so new pages never call endpoints that aren't live yet.
     if: always() && needs.ci-green.result == 'success' && inputs.target != 'api' && (needs.api.result == 'success' || needs.api.result == 'skipped')
     runs-on: ubuntu-latest
-    environment: production
+    environment: ${{ inputs.environment }}
+    env:
+      API_URL: ${{ vars.API_URL }}
+      WEB_URL: ${{ vars.WEB_URL }}
+      SENTRY_DSN: ${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
     steps:
+      - name: Check the environment's variables
+        run: |
+          test -n "$API_URL" -a -n "$WEB_URL" || {
+            echo "::error::Set API_URL and WEB_URL on the '$DEPLOY_ENV' environment (Settings → Environments)"
+            exit 1
+          }
       - uses: actions/checkout@v4
       - uses: superfly/flyctl-actions/setup-flyctl@master
+      # DEPLOY_ENV is a build arg because robots.txt is generated at build time.
       - run: >
-          flyctl deploy --config infra/fly/web.toml --remote-only
-          --build-arg API_URL=${{ vars.API_URL }}
-          --build-arg WEB_URL=${{ vars.WEB_URL }}
-          --build-arg NEXT_PUBLIC_SENTRY_DSN=${{ vars.NEXT_PUBLIC_SENTRY_DSN }}
-          --build-arg GIT_SHA=${{ github.sha }}
+          flyctl deploy --config infra/fly/web.toml --app "markethub-web$SUFFIX" --remote-only
+          --env WEB_URL="$WEB_URL"
+          --env API_INTERNAL_URL="http://markethub-api$SUFFIX.internal:3001"
+          --build-arg API_URL="$API_URL"
+          --build-arg WEB_URL="$WEB_URL"
+          --build-arg DEPLOY_ENV="$DEPLOY_ENV"
+          --build-arg NEXT_PUBLIC_SENTRY_DSN="$SENTRY_DSN"
+          --build-arg GIT_SHA="$GITHUB_SHA"
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

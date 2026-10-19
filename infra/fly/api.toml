@@ -1,5 +1,8 @@
-# Fly.io — MarketHub API. Deploy from the repo root:
-#   fly deploy --config infra/fly/api.toml
+# Fly.io — MarketHub API, for both environments: production is app markethub-api,
+# staging is markethub-api-staging (same shape, so load tests mean something).
+# Normally deployed by .github/workflows/deploy.yml; by hand, from the repo root:
+#   fly deploy --config infra/fly/api.toml -a <app> \
+#     -e WEB_URL=https://… -e API_URL=https://… -e DEPLOY_ENV=production|staging
 # Secrets (fly secrets set …): DATABASE_URL, REDIS_URL, JWT_*, INTERNAL_API_KEY,
 # S3_*, PAYSTACK_*, RESEND_API_KEY, AFRICASTALKING_*, VAPID_*, SENTRY_DSN, OTEL_* — see docs/RUNBOOK.md.
 app = "markethub-api"
@@ -16,8 +19,8 @@ primary_region = "jnb" # Johannesburg: closest Fly region to the launch markets
 [env]
   NODE_ENV = "production"
   PORT = "3001"
-  WEB_URL = "https://markethub.example" # change to the real domain
-  API_URL = "https://api.markethub.example"
+  # WEB_URL, API_URL and DEPLOY_ENV differ per environment, so they come from
+  # `fly deploy -e` only (never both here and there). Without them the API won't boot.
   OTEL_SERVICE_NAME = "markethub-api"
 
 [http_service]
