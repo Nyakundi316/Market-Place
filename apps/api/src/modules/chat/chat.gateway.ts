@@ -84,7 +84,9 @@ export class ChatGateway implements OnGatewayInit, OnGatewayConnection, OnGatewa
     @ConnectedSocket() socket: ChatSocket,
     @MessageBody() body: unknown,
   ): Promise<Ack<MessageDto>> {
-    return this.run(socket, async (user) => this.chat.send(user, sendMessageSchema.parse(body)));
+    return this.run(socket, async (user) =>
+      this.chat.send(user, sendMessageSchema.parse(body), socket.id),
+    );
   }
 
   @SubscribeMessage('message:read')

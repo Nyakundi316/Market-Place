@@ -183,8 +183,12 @@ export class ChatService {
     };
   }
 
-  /** §5: persist, then broadcast. Used by both REST and the gateway. */
-  async send(user: RequestUser, input: SendMessageInput): Promise<MessageDto> {
+  /** §5: persist, then broadcast. Used by both REST and the gateway (which passes its socket id). */
+  async send(
+    user: RequestUser,
+    input: SendMessageInput,
+    senderSocketId?: string,
+  ): Promise<MessageDto> {
     await this.assertCanChat(user);
     const conversation = await this.membership(user.id, input.conversationId);
     await this.throttle(user.id);
@@ -207,7 +211,7 @@ export class ChatService {
         },
       }),
     );
-    this.realtime.toConversation(conversation.id, 'message:new', message);
+    this.realtime.messageNew(message, senderSocketId);
 
     const recipientId =
       conversation.buyerId === user.id ? conversation.sellerId : conversation.buyerId;

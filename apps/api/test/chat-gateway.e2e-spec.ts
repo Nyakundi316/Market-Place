@@ -134,6 +134,23 @@ describe('Chat gateway (e2e)', () => {
     expect(await db.message.count({ where: { conversationId: conversation.id } })).toBe(1);
   });
 
+  it('the sending tab gets its message from the ack only; the sender’s other tabs get it live', async () => {
+    const conversation = await openChat();
+    const [sending, otherTab] = await Promise.all([connect(buyer), connect(buyer)]);
+
+    const quiet = silent(sending, 'message:new');
+    const mirrored = next(otherTab, 'message:new');
+    const ack = await sending.emitWithAck('message:send', {
+      conversationId: conversation.id,
+      type: 'text',
+      body: 'one bubble, please',
+      attachments: [],
+    });
+    expect(ack).toMatchObject({ ok: true });
+    expect(await mirrored).toMatchObject({ body: 'one bubble, please' });
+    expect(await quiet).toBe(true);
+  });
+
   it('REST sends are broadcast to sockets too', async () => {
     const conversation = await openChat();
     const s = await connect(seller);

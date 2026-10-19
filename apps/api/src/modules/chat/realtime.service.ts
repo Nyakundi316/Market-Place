@@ -1,5 +1,10 @@
 import { Injectable, type OnModuleDestroy } from '@nestjs/common';
-import type { ClientToServerEvents, PresenceStatus, ServerToClientEvents } from '@markethub/shared';
+import type {
+  ClientToServerEvents,
+  MessageDto,
+  PresenceStatus,
+  ServerToClientEvents,
+} from '@markethub/shared';
 import type Redis from 'ioredis';
 import type { Server } from 'socket.io';
 import { InjectRedis } from '../../redis/redis.module';
@@ -40,6 +45,16 @@ export class RealtimeService implements OnModuleDestroy {
     ...args: Parameters<ServerToClientEvents[E]>
   ) {
     this.server?.to(convRoom(conversationId)).emit(event, ...args);
+  }
+
+  /**
+   * A sent message goes to the room minus the socket that sent it: that tab
+   * already has it from the ack, and a second copy would land beside its
+   * optimistic bubble until the ack arrived. The sender's other tabs still get it.
+   */
+  messageNew(message: MessageDto, senderSocketId?: string) {
+    const room = this.server?.to(convRoom(message.conversationId));
+    (senderSocketId ? room?.except(senderSocketId) : room)?.emit('message:new', message);
   }
 
   toUser<E extends keyof ServerToClientEvents>(
