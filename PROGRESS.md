@@ -165,9 +165,12 @@ Accounts and keys only — no open feature decisions. Details in `docs/RUNBOOK.m
 - [ ] Africa's Talking: live app + SMS credit, apply for a `MARKETHUB` sender id (takes days), `AFRICASTALKING_*`
 - [ ] Web Push: `npx web-push generate-vapid-keys` once → `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`; keep the pair safe (rotating it kills every subscription)
 - [ ] OAuth (optional): Google + GitHub client ids/secrets
-- [ ] Fly: account, `FLY_API_TOKEN` secret (allowed to `fly ssh` for the load test)
-- [ ] GitHub environments `staging` and `production`, each with `API_URL`/`WEB_URL`; staging also gets secret `JWT_ACCESS_SECRET`
-- [ ] Staging (RUNBOOK §11): apps, its own Postgres + Redis, test/sandbox keys, staging R2 buckets → Deploy → staging
+- [x] Fly account (bazantyloffan@gmail.com, org `personal`) and `FLY_API_TOKEN` repo secret (2026-10-19)
+- [x] Staging apps created: `markethub-api-staging`, `markethub-web-staging`
+- [x] GitHub environment `staging` with `API_URL` / `WEB_URL` (the fly.dev URLs). `production` environment not created yet
+- [ ] **Payment method on Fly** (next). After login, `fly secrets list` on the staging app answered "unauthorized"; billing is the likely cause, unconfirmed
+- [ ] `bash infra/fly/set-staging-secrets.sh` (JWT pair, `INTERNAL_API_KEY`, VAPID, and the k6 `JWT_ACCESS_SECRET` on GitHub). The GitHub `staging` secret `JWT_ACCESS_SECRET` set on 2026-10-19 is a placeholder from a failed run and must be overwritten by this script
+- [ ] Staging Postgres + Redis in/near `jnb` (compare prices first), then Paystack test keys, staging R2 buckets, Resend key (RUNBOOK §11) → Deploy → staging
 - [ ] Load test (staging): smoke, then ramp; note what `vus` max held and which threshold broke first
 
 Local dev: `.env` now has a dev-only VAPID pair (push works with `pnpm build && pnpm start`; the service worker isn't registered under `pnpm dev`). For SMS locally, put the Africa's Talking sandbox username `sandbox` + its key in `.env`, or leave blank to read codes from the Redis outbox / API log.
