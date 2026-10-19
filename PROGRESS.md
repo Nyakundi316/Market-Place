@@ -175,9 +175,13 @@ Accounts and keys only — no open feature decisions. Details in `docs/RUNBOOK.m
 - [x] Paystack test key on staging (both names, same value). The first test key was printed by a PowerShell error during setup and was regenerated in Paystack
 - [x] R2 buckets `markethub-staging` (public, r2.dev URL) + `markethub-staging-private` (no public access), CORS for the staging web origin on both, an Object Read & Write token scoped to the two buckets; Resend key; `MAIL_FROM` = `onboarding@resend.dev` (delivers only to the Resend account owner until a domain is verified)
 - [x] **Staging deployed 2026-10-19** (run 39252815420): API on 2 machines in jnb, `/health` postgres + redis up; web at https://markethub-web-staging.fly.dev, `robots.txt` = `Disallow: /`
-- [x] Staging seeded: 55 categories + an admin created with a random password nobody saw (set your own via Forgot password). **Open:** the admin email must be moved to the Resend account address, since `onboarding@resend.dev` only delivers there
+- [x] Staging seeded: 55 categories + admin `bazantyloffan@gmail.com` (the Resend account address, since `onboarding@resend.dev` only delivers there), created with a random password nobody saw; a reset email was sent 2026-10-19 and Resend accepted it
 - [x] Load test smoke passed (run 39257030313): 0 errors, chat ack ~300 ms from a US runner (~290 ms of it distance). Fixed on the way: flyctl's stdout banner broke fixtures.json; the round trip was measured to Fly's nearest edge instead of jnb
-- [ ] Load test ramp (run 39257269793, browse 300 / chat 1000): running
+- [x] Load test ramp (run 39257269793, browse 300 / chat 1000), nothing went down and users were cleaned up:
+  - **Browsing** stopped at 60 VUs on listing p95 589.8 ms vs a 588 ms budget (288 ms of it the runner→jnb trip); 0 of 1,066 requests failed. That measures transatlantic jitter, not capacity
+  - **Chat** held 400 users cleanly; at 600, 166 sends/connects failed (limit 10) with a long tail (connects up to 20 s, acks up to 17 s) while p95 stayed ~335 ms. Suspects: shared-cpu-1x throttling under sustained load, and Prisma's default pool of 3 connections per 1-CPU machine
+- [ ] **Next:** chat-only ramp while watching Fly Metrics (CPU/throttling) with `connection_limit=10` on `DATABASE_URL`, to tell CPU from pool. Until fixed, plan for ~400 concurrent chat users
+- [ ] Browsing capacity needs a measure distance can't swamp (e.g. a `Server-Timing` header k6 can read), or a load machine near jnb
 - [ ] **Decision for production**: Fly Managed Postgres isn't offered in `jnb` (nearest: ams/fra/lhr). Options: self-run Fly Postgres in jnb (we own backups and failover; RUNBOOK §8 assumes point-in-time recovery), a managed Postgres in South Africa from another provider, or moving the stack to Europe
 
 Local dev: `.env` now has a dev-only VAPID pair (push works with `pnpm build && pnpm start`; the service worker isn't registered under `pnpm dev`). For SMS locally, put the Africa's Talking sandbox username `sandbox` + its key in `.env`, or leave blank to read codes from the Redis outbox / API log.
