@@ -118,6 +118,7 @@ Do the same for web if needed (web first if only the UI is broken). Database cha
 
 | When | What |
 | --- | --- |
+| Before 2027-10-19 | Renew the GitHub `FLY_API_TOKEN` (org deploy token, 1 year): `fly tokens create org -o personal -n github-actions -x 8760h | gh secret set FLY_API_TOKEN` |
 | Every 90 days | Rotate JWT secrets (§9 of the brief) — plan for users being signed out |
 | Monthly | Dependency updates (`pnpm outdated`), review Sentry's top issues, check the dead-letter queue |
 | Before a big launch/promo | Actions → **Load test (staging)** (§11); watch API p95, Postgres CPU, Redis ops |

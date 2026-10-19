@@ -34,11 +34,13 @@ jobs:
       - name: Check CI status
         env:
           GH_TOKEN: ${{ github.token }}
+        # Only the CI workflow counts. Reading every check run on the commit also caught
+        # this workflow's own jobs, so one failed deploy blocked every retry of that commit.
         run: |
-          state=$(gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/check-runs" \
-            --jq '[.check_runs[] | select(.name != "Require green CI on this commit") | .conclusion] | if length == 0 then "none" elif all(. == "success" or . == "skipped") then "ok" else "bad" end')
-          echo "CI: $state"
-          test "$state" = ok
+          state=$(gh api "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?head_sha=${{ github.sha }}&per_page=1" \
+            --jq '.workflow_runs[0].conclusion // "none"')
+          echo "CI on ${GITHUB_SHA::7}: $state"
+          test "$state" = success
 
   api:
     needs: ci-green

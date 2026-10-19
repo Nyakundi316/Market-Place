@@ -165,7 +165,7 @@ Accounts and keys only — no open feature decisions. Details in `docs/RUNBOOK.m
 - [ ] Africa's Talking: live app + SMS credit, apply for a `MARKETHUB` sender id (takes days), `AFRICASTALKING_*`
 - [ ] Web Push: `npx web-push generate-vapid-keys` once → `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`; keep the pair safe (rotating it kills every subscription)
 - [ ] OAuth (optional): Google + GitHub client ids/secrets
-- [x] Fly account (bazantyloffan@gmail.com, org `personal`) and `FLY_API_TOKEN` repo secret (2026-10-19)
+- [x] Fly account (bazantyloffan@gmail.com, org `personal`). `FLY_API_TOKEN` repo secret is an org deploy token named `github-actions`, created 2026-10-19 after the apps existed (the first token was refused), **expires 2027-10-19**
 - [x] Staging apps created: `markethub-api-staging`, `markethub-web-staging`
 - [x] GitHub environment `staging` with `API_URL` / `WEB_URL` (the fly.dev URLs). `production` environment not created yet
 - [x] Payment method on Fly (the "unauthorized" on `fly secrets list` was billing; it works since the card was added)
