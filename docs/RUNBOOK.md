@@ -134,8 +134,15 @@ The production apps and configs with a `-staging` suffix: `markethub-api-staging
 **Set up once**
 
 1. `fly apps create markethub-api-staging` and `fly apps create markethub-web-staging`.
-2. Postgres and Redis **of its own**, never production's (same options as §1). Set `DATABASE_URL` and `REDIS_URL` on `markethub-api-staging`.
-3. `bash infra/fly/set-staging-secrets.sh` generates and stores the secrets nobody has to look up (JWT pair, `INTERNAL_API_KEY` on both apps, a staging VAPID pair, and the k6 copy of `JWT_ACCESS_SECRET` on the GitHub environment), printing names only. Then the other §2 secrets, with test values: Paystack **test** keys (`sk_test_…`) and a test-mode webhook to `https://markethub-api-staging.fly.dev/webhooks/paystack`; `AFRICASTALKING_USERNAME=sandbox` with the sandbox key; a separate VAPID pair, separate JWT secrets and `INTERNAL_API_KEY` (same value on both staging apps); two staging R2 buckets set up as in §3.2. Resend can share production's key: load-test users are on a reserved `.test` domain and are never mailed.
+2. Postgres and Redis **of its own**, never production's, and in `jnb`: Fly's Managed Postgres isn't offered there, and a database in Europe would add ~160 ms to every query. Both are self-run on Fly:
+   ```bash
+   fly postgres create --name markethub-db-staging --org personal --region jnb --initial-cluster-size 1 \
+     --vm-size shared-cpu-1x --vm-memory 1024 --volume-size 10 --image-ref flyio/postgres-flex:16
+   fly postgres attach markethub-db-staging -a markethub-api-staging      # sets DATABASE_URL
+   fly apps create markethub-redis-staging --org personal
+   fly volumes create redis_data --region jnb --size 1 -a markethub-redis-staging
+   ```
+3. `bash infra/fly/set-staging-secrets.sh` generates and stores the secrets nobody has to look up (JWT pair, `INTERNAL_API_KEY` on both apps, a staging VAPID pair, `REDIS_PASSWORD` plus the matching `REDIS_URL`, and the k6 copy of `JWT_ACCESS_SECRET` on the GitHub environment), printing names only. Then start Redis: `fly deploy --config infra/fly/redis-staging.toml --ha=false` (one machine, one volume). Then the other §2 secrets, with test values: Paystack **test** keys (`sk_test_…`) and a test-mode webhook to `https://markethub-api-staging.fly.dev/webhooks/paystack`; `AFRICASTALKING_USERNAME=sandbox` with the sandbox key; a separate VAPID pair, separate JWT secrets and `INTERNAL_API_KEY` (same value on both staging apps); two staging R2 buckets set up as in §3.2. Resend can share production's key: load-test users are on a reserved `.test` domain and are never mailed.
 4. GitHub → Settings → Environments → **staging**: variables `API_URL=https://markethub-api-staging.fly.dev`, `WEB_URL=https://markethub-web-staging.fly.dev`; secret `JWT_ACCESS_SECRET` = the staging API's (k6 signs tokens with it). Give **production** its own `API_URL` / `WEB_URL`.
 5. `FLY_API_TOKEN` (repo secret, or per environment) must be allowed to deploy and, for the load test, to `fly ssh`. If the load workflow's seed step is refused, give the staging environment an org token (`fly tokens create org`) as its own `FLY_API_TOKEN`.
 6. Actions → **Deploy** → *staging*. Then create an admin as in §3.7 with `-a markethub-api-staging`.

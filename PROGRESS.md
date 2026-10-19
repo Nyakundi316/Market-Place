@@ -168,9 +168,13 @@ Accounts and keys only — no open feature decisions. Details in `docs/RUNBOOK.m
 - [x] Fly account (bazantyloffan@gmail.com, org `personal`) and `FLY_API_TOKEN` repo secret (2026-10-19)
 - [x] Staging apps created: `markethub-api-staging`, `markethub-web-staging`
 - [x] GitHub environment `staging` with `API_URL` / `WEB_URL` (the fly.dev URLs). `production` environment not created yet
-- [ ] **Payment method on Fly** (next). After login, `fly secrets list` on the staging app answered "unauthorized"; billing is the likely cause, unconfirmed
-- [ ] `bash infra/fly/set-staging-secrets.sh` (JWT pair, `INTERNAL_API_KEY`, VAPID, and the k6 `JWT_ACCESS_SECRET` on GitHub). The GitHub `staging` secret `JWT_ACCESS_SECRET` set on 2026-10-19 is a placeholder from a failed run and must be overwritten by this script
-- [ ] Staging Postgres + Redis in/near `jnb` (compare prices first), then Paystack test keys, staging R2 buckets, Resend key (RUNBOOK §11) → Deploy → staging
+- [x] Payment method on Fly (the "unauthorized" on `fly secrets list` was billing; it works since the card was added)
+- [x] Staging Postgres 16: `markethub-db-staging` in `jnb` (self-run Fly Postgres, 1 node, 1 GB, 10 GB disk), attached to the API (`DATABASE_URL` set). Choice 2026-10-19: self-run, all in jnb, ~$10/month with Redis
+- [x] Staging Redis app `markethub-redis-staging` + 1 GB volume in `jnb`; config `infra/fly/redis-staging.toml`, not deployed yet
+- [ ] `bash infra/fly/set-staging-secrets.sh` (JWT pair, `INTERNAL_API_KEY`, VAPID, Redis password + `REDIS_URL`, and the k6 `JWT_ACCESS_SECRET` on GitHub). The GitHub `staging` secret `JWT_ACCESS_SECRET` set on 2026-10-19 is a placeholder from a failed run and must be overwritten by this script
+- [ ] Deploy Redis: `fly deploy --config infra/fly/redis-staging.toml --ha=false` (after the script, so the password is in place)
+- [ ] Paystack test keys, staging R2 buckets, Resend key (RUNBOOK §11); the API won't boot without them → Deploy → staging
+- [ ] **Decision for production**: Fly Managed Postgres isn't offered in `jnb` (nearest: ams/fra/lhr). Options: self-run Fly Postgres in jnb (we own backups and failover; RUNBOOK §8 assumes point-in-time recovery), a managed Postgres in South Africa from another provider, or moving the stack to Europe
 - [ ] Load test (staging): smoke, then ramp; note what `vus` max held and which threshold broke first
 
 Local dev: `.env` now has a dev-only VAPID pair (push works with `pnpm build && pnpm start`; the service worker isn't registered under `pnpm dev`). For SMS locally, put the Africa's Talking sandbox username `sandbox` + its key in `.env`, or leave blank to read codes from the Redis outbox / API log.

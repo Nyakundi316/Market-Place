@@ -1,0 +1,24 @@
+# Fly.io — self-run Redis 7 for staging, in jnb beside the API so a load test measures
+# the system rather than the distance. Private network only (no public IPs): the API
+# reaches it as markethub-redis-staging.internal:6379, which is IPv6-only, hence
+# `?family=6` on REDIS_URL. Secret: REDIS_PASSWORD (infra/fly/set-staging-secrets.sh).
+# One machine, one volume, so always deploy with --ha=false:
+#   fly deploy --config infra/fly/redis-staging.toml --ha=false
+app = "markethub-redis-staging"
+primary_region = "jnb"
+
+[build]
+  image = "redis:7.4-alpine"
+
+[mounts]
+  source = "redis_data"
+  destination = "/data"
+
+[processes]
+  # Through the image's entrypoint so Redis drops to its own user and owns /data.
+  # noeviction: BullMQ must never lose queued jobs to memory pressure; writes fail instead.
+  app = "sh -c 'exec docker-entrypoint.sh redis-server --requirepass \"$REDIS_PASSWORD\" --dir /data --appendonly yes --maxmemory 150mb --maxmemory-policy noeviction'"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
