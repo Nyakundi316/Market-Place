@@ -3,10 +3,11 @@
  * profiles, two live listings for every other user, and one conversation per
  * buyer/seller pair, then writes load/fixtures.json for the k6 scripts.
  *
- *   pnpm --filter api seed:load -- --users 200
+ *   pnpm --filter api seed:load -- --users 200 [--out /tmp/fixtures.json]
  *
- * Refuses to run against production. Users are marked by email domain
- * (@load.markethub.test) so `--clean` can remove them again.
+ * Refuses to run against production. Staging is a production build too, so it
+ * runs only where DEPLOY_ENV=staging says so. Users are marked by email domain
+ * (@load.markethub.test, never mailed) so `--clean` can remove them again.
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -42,7 +43,7 @@ async function clean(db: PrismaClient) {
 }
 
 async function main() {
-  if (process.env.NODE_ENV === 'production') {
+  if (process.env.NODE_ENV === 'production' && process.env.DEPLOY_ENV !== 'staging') {
     throw new Error('Refusing to seed load-test users in production');
   }
   const db = new PrismaClient();
@@ -122,7 +123,12 @@ async function main() {
       }
     }
 
-    const out = resolve(__dirname, '../../../load/fixtures.json');
+    // Inside the deployed image the repo's load/ folder doesn't exist; pass --out there.
+    const outAt = process.argv.indexOf('--out');
+    const out =
+      outAt > -1
+        ? resolve(process.argv[outAt + 1]!)
+        : resolve(__dirname, '../../../load/fixtures.json');
     mkdirSync(resolve(out, '..'), { recursive: true });
     // Ids only: k6 signs short-lived access tokens for them itself.
     writeFileSync(
