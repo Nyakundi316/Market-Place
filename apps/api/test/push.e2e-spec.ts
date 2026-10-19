@@ -24,7 +24,7 @@ describe('Web Push (e2e)', () => {
   let user: TestUser;
   let other: TestUser;
   const http = () => request(app.getHttpServer());
-  const subscribe = (who: TestUser, body: unknown) =>
+  const subscribe = (who: TestUser, body: object) =>
     http().post('/me/push-subscriptions').set('Authorization', who.auth).send(body);
 
   beforeAll(async () => {

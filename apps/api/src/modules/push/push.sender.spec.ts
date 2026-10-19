@@ -31,7 +31,7 @@ describe('PushSender', () => {
     let details: ReturnType<typeof webpush.generateRequestDetails> | undefined;
     jest.spyOn(webpush, 'sendNotification').mockImplementation(async (s, payload, o) => {
       // What sendNotification would POST, minus the network.
-      details = webpush.generateRequestDetails(s, payload, o);
+      details = webpush.generateRequestDetails(s, payload ?? undefined, o);
       expect(o?.vapidDetails?.subject).toBe('mailto:no-reply@markethub.co');
       return { statusCode: 201, body: '', headers: {} };
     });
