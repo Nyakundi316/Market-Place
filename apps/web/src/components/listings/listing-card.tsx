@@ -110,7 +110,14 @@ export function ListingCard({
               <span aria-hidden>·</span>
             </>
           )}
-          <span className="shrink-0">{timeAgo(l.publishedAt ?? l.createdAt)}</span>
+          {/* Server and phone each read their own clock: a minute apart is not a mismatch */}
+          <time
+            className="shrink-0"
+            dateTime={l.publishedAt ?? l.createdAt}
+            suppressHydrationWarning
+          >
+            {timeAgo(l.publishedAt ?? l.createdAt)}
+          </time>
         </p>
         <div className="mt-1 flex items-center gap-2 text-xs">
           {l.condition && (

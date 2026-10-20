@@ -21,7 +21,7 @@ export function CategoryChips({
 }) {
   const chip = (active: boolean) =>
     cn(
-      'shrink-0 snap-start rounded-full border px-3.5 py-1.5 text-sm transition-colors',
+      'block whitespace-nowrap rounded-full border px-3.5 py-1.5 text-sm transition-colors',
       active
         ? 'border-foreground bg-foreground text-background'
         : 'bg-card hover:border-foreground/40',
@@ -30,7 +30,7 @@ export function CategoryChips({
     <nav aria-label="Categories" className="-mx-4 lg:mx-0">
       <ul className="flex snap-x gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] lg:flex-wrap lg:px-0">
         {allHref && (
-          <li>
+          <li className="shrink-0 snap-start">
             <Link
               href={allHref}
               className={chip(!activeSlug)}
@@ -41,7 +41,7 @@ export function CategoryChips({
           </li>
         )}
         {categories.map((c) => (
-          <li key={c.id}>
+          <li key={c.id} className="shrink-0 snap-start">
             <Link
               href={`/c/${c.slug}`}
               className={chip(c.slug === activeSlug)}

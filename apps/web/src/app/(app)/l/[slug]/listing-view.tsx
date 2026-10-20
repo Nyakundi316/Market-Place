@@ -37,7 +37,9 @@ function PriceBlock({ l, className }: { l: ListingDetailDto; className?: string 
         <MapPin className="size-3.5" aria-hidden />
         {[l.city, countryName(l.country)].filter(Boolean).join(', ')}
         <span aria-hidden>·</span>
-        {timeAgo(l.publishedAt ?? l.createdAt)}
+        <time dateTime={l.publishedAt ?? l.createdAt} suppressHydrationWarning>
+          {timeAgo(l.publishedAt ?? l.createdAt)}
+        </time>
       </p>
       {l.status !== 'active' && (
         <p
@@ -197,8 +199,9 @@ export function ListingView({ slug, initial }: { slug: string; initial: ListingD
           {l.isOwner ? (
             <div className="rounded-lg border bg-card p-4">
               <p className="mb-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Eye className="size-3.5" aria-hidden /> {l.viewsCount} views · {l.favoritesCount}{' '}
-                saves
+                <Eye className="size-3.5" aria-hidden /> {l.viewsCount} view
+                {l.viewsCount === 1 ? '' : 's'} · {l.favoritesCount} save
+                {l.favoritesCount === 1 ? '' : 's'}
               </p>
               <OwnerActions listing={l} layout="panel" afterDelete="/seller" />
             </div>

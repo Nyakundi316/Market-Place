@@ -1,4 +1,10 @@
 import type { ListingCardDto } from '@markethub/shared';
+import { DEFAULT_LOCALE } from '@/i18n';
+
+// Everything above the chat section is rendered on the server too, so it can't follow the
+// runtime's locale: Node says "4 min. ago", a phone set to English (Kenya) says "4 min ago",
+// and React then throws the server HTML away and re-renders the whole page.
+const LOCALE = DEFAULT_LOCALE;
 
 const moneyFormatters = new Map<string, Intl.NumberFormat>();
 
@@ -9,7 +15,7 @@ export function formatMoney(amount: string | number, currency: string) {
   const key = `${currency}:${whole}`;
   let fmt = moneyFormatters.get(key);
   if (!fmt) {
-    fmt = new Intl.NumberFormat(undefined, {
+    fmt = new Intl.NumberFormat(LOCALE, {
       style: 'currency',
       currency,
       currencyDisplay: 'code',
@@ -31,7 +37,7 @@ export function formatPrice(
   return l.price ? formatMoney(l.price, l.currency) : 'Price on request';
 }
 
-const rtf = new Intl.RelativeTimeFormat(undefined, { numeric: 'auto', style: 'short' });
+const rtf = new Intl.RelativeTimeFormat(LOCALE, { numeric: 'auto', style: 'short' });
 const STEPS: [Intl.RelativeTimeFormatUnit, number][] = [
   ['year', 31_536_000],
   ['month', 2_592_000],

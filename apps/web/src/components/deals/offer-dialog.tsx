@@ -110,9 +110,14 @@ export function OfferDialog({
       <DialogContent>
         <DialogHeader>
           <DialogTitle>{counterTo ? 'Counter-offer' : 'Make an offer'}</DialogTitle>
-          <DialogDescription className="truncate">
-            {listing.title}
-            {listing.price && ` · listed at ${formatMoney(listing.price, listing.currency)}`}
+          {/* A long title gives way; the asking price is what the offer is weighed against */}
+          <DialogDescription className="flex gap-1">
+            <span className="truncate">{listing.title}</span>
+            {listing.price && (
+              <span className="shrink-0">
+                · listed at {formatMoney(listing.price, listing.currency)}
+              </span>
+            )}
           </DialogDescription>
         </DialogHeader>
 

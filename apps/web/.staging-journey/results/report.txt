@@ -1,0 +1,71 @@
+PASS  public /
+PASS  public /search?q=phone
+PASS  public /c/services
+PASS  public /login
+PASS  public /signup
+PASS  public /forgot-password
+PASS  public /offline
+PASS  public /no-such-page-here
+PASS  robots.txt closed, sitemap and manifest served
+PASS  signed-out /deals bounces to login
+PASS  settings: bio saves
+FAIL  settings: profile photo upload
+        [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+FAIL  settings: ID document upload + submit
+        [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+FAIL  item listing with photos
+        [2mexpect([22m[31mlocator[39m[2m).[22mtoHaveValue[2m([22m[32mexpected[39m[2m)[22m failed | page says: Retry or remove the failed photos.
+PASS  service listing published (no photo)
+PASS  listing page
+PASS  public profile shows bio + listing
+PASS  seller dashboard lists it
+PASS  search finds it
+PASS  category page lists it
+FAIL  save → Saved
+        [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed
+PASS  buyer starts a chat
+PASS  seller sees the thread and message
+PASS  seller reply reaches the buyer live
+FAIL  chat photo
+        [2mexpect([22m[31mlocator[39m[2m).[22mtoBeVisible[2m([22m[2m)[22m failed | page says: Chats · MarketHub
+PASS  offer → seller accepts
+PASS  checkout → order
+FAIL  Pay now → Paystack checkout
+        no Paystack session; dialog says: Pay KES 2,200 ORD-2026-000001 · held in escrow until you confirm delivery Something went wrong Try again Close | page says: Order · MarketHub / Something went wrong
+PASS  seller notifications
+PASS  deals page shows the order
+PASS  log out
+PASS  forgot password
+PASS  log back in
+PASS  desktop /
+PASS  desktop /search?q=repairs
+PASS  desktop /l/phone-screen-repairs-e2emvgzt681fa0-8350a20f
+PASS  desktop /u/e2emvgzrkhgcpa
+PASS  desktop /c/services
+
+network/console problems (53):
+  [seller] request failed: GET https://markethub-web-staging.fly.dev/c/cleaning (net::ERR_ABORTED)
+  [seller] HTTP 404: GET https://markethub-web-staging.fly.dev/no-such-page-here
+  [seller] request failed: GET https://markethub-web-staging.fly.dev/c/property (net::ERR_ABORTED)
+  [seller] request failed: GET https://markethub-web-staging.fly.dev/c/electronics (net::ERR_ABORTED)
+  6× [seller] HTTP 500: POST https://markethub-web-staging.fly.dev/api/images/sign
+  3× [seller] request failed: GET https://markethub-web-staging.fly.dev/l/phone-screen-repairs-e2emvgzt681fa0-8350a20f (net::ERR_ABORTED)
+  [buyer] request failed: GET https://markethub-web-staging.fly.dev/c/events-catering (net::ERR_ABORTED)
+  [buyer] request failed: GET https://markethub-web-staging.fly.dev/c/services (net::ERR_ABORTED)
+  [buyer] request failed: GET https://markethub-web-staging.fly.dev/c/tutoring (net::ERR_ABORTED)
+  [buyer] request failed: GET https://markethub-web-staging.fly.dev/chat/d8ec9c72-91ad-4279-98b3-984d43252783 (net::ERR_ABORTED)
+  [seller] request failed: GET https://markethub-web-staging.fly.dev/chat/d8ec9c72-91ad-4279-98b3-984d43252783 (net::ERR_ABORTED)
+  [seller] request failed: GET https://markethub-web-staging.fly.dev/u/e2emvgztzs3fvg (net::ERR_ABORTED)
+  [buyer] HTTP 500: POST https://markethub-web-staging.fly.dev/api/images/sign
+  14× [buyer] page error: Minified React error #425; visit https://react.dev/errors/425 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+  2× [buyer] page error: Minified React error #418; visit https://react.dev/errors/418 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+  2× [buyer] page error: Minified React error #423; visit https://react.dev/errors/423 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+  [buyer] request failed: GET https://markethub-web-staging.fly.dev/u/e2emvgzrkhgcpa (net::ERR_ABORTED)
+  [buyer] request failed: GET https://markethub-web-staging.fly.dev/orders/b7dfa15f-d0d0-4eef-985f-500a1506001a (net::ERR_ABORTED)
+  [buyer] HTTP 500: POST https://markethub-web-staging.fly.dev/api/orders/b7dfa15f-d0d0-4eef-985f-500a1506001a/pay
+  [buyer] request failed: POST https://markethub-web-staging.fly.dev/api/auth/logout (net::ERR_ABORTED)
+  [buyer] request failed: GET https://markethub-web-staging.fly.dev/l/phone-screen-repairs-e2emvgz3ek4avr-683a61ea (net::ERR_ABORTED)
+  [buyer] request failed: GET https://markethub-web-staging.fly.dev/c/vehicles (net::ERR_ABORTED)
+  7× [desktop] page error: Minified React error #425; visit https://react.dev/errors/425 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+  [desktop] page error: Minified React error #418; visit https://react.dev/errors/418 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.
+  [desktop] page error: Minified React error #423; visit https://react.dev/errors/423 for the full message or use the non-minified dev environment for full errors and additional helpful warnings.

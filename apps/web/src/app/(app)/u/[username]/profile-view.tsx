@@ -14,6 +14,7 @@ import { ReviewStars } from '@/components/review-stars';
 import { Button } from '@/components/ui/button';
 import { VerificationBadge } from '@/components/verification-badge';
 import { useListingSearch } from '@/hooks/use-listings';
+import { DEFAULT_LOCALE } from '@/i18n';
 import { api, ApiError } from '@/lib/api';
 import { countryName } from '@/lib/countries';
 import { timeAgo } from '@/lib/format';
@@ -95,7 +96,13 @@ function Reviews({ userId }: { userId: string }) {
           <div className="flex items-center gap-2.5">
             <ProfileAvatar name={r.rater.displayName} src={r.rater.avatarUrl} className="size-7" />
             <span className="text-sm font-medium">{r.rater.displayName}</span>
-            <span className="text-xs text-muted-foreground">{timeAgo(r.createdAt)}</span>
+            <time
+              className="text-xs text-muted-foreground"
+              dateTime={r.createdAt}
+              suppressHydrationWarning
+            >
+              {timeAgo(r.createdAt)}
+            </time>
           </div>
           <ReviewStars rating={r.rating} className="mt-2" />
           {r.comment && <p className="mt-1.5 text-sm leading-relaxed">{r.comment}</p>}
@@ -201,9 +208,11 @@ export function ProfileView({ initial }: { initial: PublicProfileDto }) {
               {[p.profession, p.company].filter(Boolean).join(' at ')}
               {(p.profession || p.company) && ' · '}
               Member since{' '}
-              {new Date(p.memberSince).toLocaleDateString(undefined, {
+              {/* Rendered on the server too: fixed locale and zone, or a phone disagrees */}
+              {new Date(p.memberSince).toLocaleDateString(DEFAULT_LOCALE, {
                 month: 'short',
                 year: 'numeric',
+                timeZone: 'Africa/Nairobi',
               })}
             </li>
           </ul>
