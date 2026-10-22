@@ -71,6 +71,46 @@
   :focus-visible {
     @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
   }
+  /* Fraunces with its soft corners turned up — warmer, less bookish. */
+  .font-display {
+    font-variation-settings: 'SOFT' 60;
+    font-optical-sizing: auto;
+  }
+}
+
+@layer components {
+  /*
+   * Swing-tag price label: notched left edge with a punched hole that shows
+   * whatever is behind it. Saffron on its dark brown foreground clears AA.
+   */
+  .price-tag {
+    @apply inline-flex items-center rounded-r-[0.3rem] bg-saffron py-1 pl-[1.15rem] pr-2.5 font-semibold leading-tight text-saffron-foreground;
+    font-variant-numeric: tabular-nums;
+    clip-path: polygon(0.55rem 0, 100% 0, 100% 100%, 0.55rem 100%, 0 50%);
+    -webkit-mask: radial-gradient(circle at 0.62rem 50%, transparent 0.15rem, #000 0.17rem);
+    mask: radial-gradient(circle at 0.62rem 50%, transparent 0.15rem, #000 0.17rem);
+  }
+
+  /*
+   * Ticket stub: a fixed-width stub, then a perforation with a bite out of the
+   * top and bottom edge. Each mask layer covers half the height so the bites
+   * stay round whatever the text wraps to.
+   */
+  .ticket {
+    --stub: 3rem;
+    display: grid;
+    grid-template-columns: var(--stub) minmax(0, 1fr);
+    -webkit-mask:
+      radial-gradient(circle at var(--stub) 0, transparent 0.4rem, #000 0.42rem) top / 100% 51%
+        no-repeat,
+      radial-gradient(circle at var(--stub) 100%, transparent 0.4rem, #000 0.42rem) bottom / 100%
+        51% no-repeat;
+    mask:
+      radial-gradient(circle at var(--stub) 0, transparent 0.4rem, #000 0.42rem) top / 100% 51%
+        no-repeat,
+      radial-gradient(circle at var(--stub) 100%, transparent 0.4rem, #000 0.42rem) bottom / 100%
+        51% no-repeat;
+  }
 }
 
 @layer utilities {

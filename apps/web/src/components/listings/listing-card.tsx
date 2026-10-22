@@ -44,18 +44,32 @@ export function ListingCard({
   listing: l,
   priority = false,
   showStatus = false,
+  lead = false,
 }: {
   listing: ListingCardDto;
   priority?: boolean;
   /** seller views show draft/sold state instead of the heart */
   showStatus?: boolean;
+  /** the 2×2 opening tile of a feed grid */
+  lead?: boolean;
 }) {
   const where = [l.city, l.country].filter(Boolean).join(', ');
+  const price = formatPrice(l);
+  const inactive = showStatus && l.status !== 'active';
   return (
-    <article className="group relative flex flex-col">
+    <article
+      className={cn(
+        'group relative flex flex-col',
+        lead && 'col-span-2 duration-500 animate-in fade-in zoom-in-[0.98] sm:row-span-2',
+      )}
+    >
       <Link
         href={`/l/${l.slug}`}
-        className="relative aspect-[4/3] overflow-hidden rounded-lg bg-muted"
+        className={cn(
+          'relative overflow-hidden rounded-md bg-muted',
+          // The lead photo grows to fill both rows; the floor keeps it visible in a sparse grid.
+          lead ? 'aspect-[4/3] sm:aspect-auto sm:min-h-72 sm:flex-1' : 'aspect-[4/3]',
+        )}
       >
         {l.coverThumbUrl ? (
           <Image
@@ -64,7 +78,7 @@ export function ListingCard({
             fill
             unoptimized // thumbnails are already resized client-side before upload
             priority={priority}
-            sizes="(min-width: 1024px) 25vw, 50vw"
+            sizes={lead ? '(min-width: 640px) 50vw, 100vw' : '(min-width: 1024px) 25vw, 50vw'}
             className="object-cover transition-transform duration-300 group-hover:scale-[1.03]"
           />
         ) : (
@@ -72,32 +86,53 @@ export function ListingCard({
             <ImageOff className="size-6" strokeWidth={1.5} aria-hidden />
           </span>
         )}
-        {l.isFeatured && (
-          <span className="absolute left-2 top-2 rounded bg-saffron px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-saffron-foreground">
+        {l.isFeatured && !inactive && (
+          <span className="absolute left-2 top-2 rounded-sm bg-foreground px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-background">
             Featured
           </span>
         )}
-        {showStatus && l.status !== 'active' && (
-          <span className="absolute inset-x-0 bottom-0 bg-foreground/75 px-2 py-1 text-center text-xs font-medium capitalize text-background">
+        {inactive && (
+          <span className="absolute inset-x-0 top-0 bg-foreground/75 px-2 py-1 text-center text-xs font-medium capitalize text-background">
             {l.status}
           </span>
         )}
-      </Link>
-      {!showStatus && <FavoriteButton listing={l} className="absolute right-2 top-2 z-10" />}
-
-      <div className="mt-2 min-w-0 px-0.5">
-        <p className="tabular text-[15px] font-semibold leading-tight">
-          {formatPrice(l)}
+        {/* Ranges run long; they drop a size rather than truncate a price. */}
+        <span
+          className={cn(
+            'price-tag absolute bottom-2.5 left-2.5 max-w-[calc(100%-1.25rem)] transition-transform duration-200 group-hover:translate-x-0.5',
+            price.length > 14 ? 'text-xs' : 'text-sm',
+            lead && 'sm:bottom-4 sm:left-4 sm:text-lg',
+          )}
+        >
+          {price}
           {l.isNegotiable && l.type !== 'request' && (
-            <span className="ml-1.5 align-middle text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+            // A half-width phone card fits "neg." after prices up to KES 99,999; past
+            // that it would wrap the tag, so the listing page's stamp carries it instead.
+            <span
+              className={cn(
+                'ml-1.5 text-[10px] font-medium uppercase tracking-wide opacity-70',
+                price.length > 10 && !lead && 'max-sm:hidden',
+              )}
+            >
               neg.
             </span>
           )}
-        </p>
-        <h3 className="mt-0.5 line-clamp-2 text-sm leading-snug">
+        </span>
+      </Link>
+      {!showStatus && <FavoriteButton listing={l} className="absolute right-2 top-2 z-10" />}
+
+      <div className="mt-2.5 min-w-0 px-0.5">
+        <h3
+          className={cn(
+            'line-clamp-2 text-sm leading-snug',
+            lead && 'font-display text-xl font-medium leading-tight sm:text-2xl',
+          )}
+        >
           <Link href={`/l/${l.slug}`} className="after:absolute after:inset-0 after:content-['']">
             {l.type !== 'product' && (
-              <span className="mr-1 text-xs font-medium text-primary">{TYPE_LABEL[l.type]} ·</span>
+              <span className="mr-1 font-sans text-xs font-medium text-primary">
+                {TYPE_LABEL[l.type]} ·
+              </span>
             )}
             {l.title}
           </Link>

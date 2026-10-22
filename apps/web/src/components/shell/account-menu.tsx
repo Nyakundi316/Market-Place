@@ -21,19 +21,18 @@ import { forgetPushDevice } from '@/lib/push';
 import { useAuth } from '@/stores/auth';
 import { t } from '@/i18n';
 
-/** `compact` = mobile top bar (avatar only); otherwise the sidebar footer row. */
-export function AccountMenu({ compact = false }: { compact?: boolean }) {
+/** The avatar menu at the end of the top bar; signed-out visitors get Log in / Sign up. */
+export function AccountMenu() {
   const status = useAuth((s) => s.status);
   const { data: me } = useMe();
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  if (status === 'unknown')
-    return <Skeleton className={compact ? 'size-9 rounded-full' : 'h-11 w-full'} />;
+  if (status === 'unknown') return <Skeleton className="size-9 rounded-full" />;
 
   if (status === 'anonymous') {
     return (
-      <div className={compact ? 'flex gap-1.5' : 'grid grid-cols-2 gap-2'}>
+      <div className="flex gap-1.5">
         <Button asChild variant="ghost" size="sm">
           <Link href="/login">{t('account.logIn')}</Link>
         </Button>
@@ -56,25 +55,10 @@ export function AccountMenu({ compact = false }: { compact?: boolean }) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        className={
-          compact
-            ? 'rounded-full'
-            : 'flex w-full items-center gap-3 rounded-lg p-2 text-left hover:bg-accent'
-        }
-        aria-label="Account menu"
-      >
+      <DropdownMenuTrigger className="rounded-full" aria-label="Account menu">
         <ProfileAvatar name={name} src={me?.profile?.avatarUrl} />
-        {!compact && (
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm font-medium">{name || 'Your account'}</span>
-            <span className="block truncate text-xs text-muted-foreground">
-              {me?.profile ? `@${me.profile.username}` : 'Finish your profile'}
-            </span>
-          </span>
-        )}
       </DropdownMenuTrigger>
-      <DropdownMenuContent align={compact ? 'end' : 'start'} className="w-56">
+      <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuLabel className="truncate font-normal text-muted-foreground">
           {me?.user.email}
         </DropdownMenuLabel>

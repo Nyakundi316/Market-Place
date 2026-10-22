@@ -8,7 +8,8 @@ import { cn } from '@/lib/utils';
 
 /**
  * Swipeable on touch (CSS scroll-snap, no carousel library), thumbnails on
- * desktop. Bleeds to the screen edge on mobile.
+ * desktop. On mobile it bleeds to the screen edges and up to the top bar
+ * (cancelling main's px-4 / pt-5).
  */
 export function Gallery({ images, title }: { images: ListingImageDto[]; title: string }) {
   const track = useRef<HTMLDivElement>(null);
@@ -16,7 +17,7 @@ export function Gallery({ images, title }: { images: ListingImageDto[]; title: s
 
   if (!images.length) {
     return (
-      <div className="-mx-4 grid aspect-[4/3] place-items-center bg-muted text-muted-foreground sm:mx-0 sm:rounded-xl">
+      <div className="-mx-4 -mt-5 grid aspect-[4/3] place-items-center bg-muted text-muted-foreground sm:mx-0 sm:mt-0 sm:rounded-xl">
         <ImageOff className="size-8" strokeWidth={1.5} aria-hidden />
         <span className="sr-only">No photos</span>
       </div>
@@ -30,7 +31,7 @@ export function Gallery({ images, title }: { images: ListingImageDto[]; title: s
 
   return (
     <div>
-      <div className="relative -mx-4 sm:mx-0">
+      <div className="relative -mx-4 -mt-5 sm:mx-0 sm:mt-0">
         <div
           ref={track}
           onScroll={(e) => {

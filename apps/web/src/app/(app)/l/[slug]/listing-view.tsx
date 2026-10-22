@@ -18,22 +18,23 @@ import { CONDITION_LABEL, formatPrice, timeAgo, TYPE_LABEL } from '@/lib/format'
 import { cn } from '@/lib/utils';
 import { Gallery } from './gallery';
 
-function PriceBlock({ l, className }: { l: ListingDetailDto; className?: string }) {
+function InfoBlock({ l, className }: { l: ListingDetailDto; className?: string }) {
   return (
     <div className={className}>
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="tabular text-2xl font-semibold tracking-tight lg:text-3xl">
-            {formatPrice(l)}
-          </p>
-          {l.isNegotiable && l.type !== 'request' && (
-            <p className="mt-0.5 text-xs font-medium text-primary">Open to offers</p>
-          )}
-        </div>
-        {!l.isOwner && <FavoriteButton listing={l} className="shrink-0 border shadow-none" />}
+      <Link
+        href={`/c/${l.category.slug}`}
+        className="text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground hover:text-foreground"
+      >
+        {l.category.parent ? `${l.category.parent.name} · ` : ''}
+        {l.category.name}
+      </Link>
+      <div className="mt-2 flex items-start justify-between gap-4">
+        <h1 className="text-balance font-display text-[1.75rem] font-medium leading-[1.1] tracking-tight lg:text-[2.125rem]">
+          {l.title}
+        </h1>
+        {!l.isOwner && <FavoriteButton listing={l} className="mt-1 shrink-0 border shadow-none" />}
       </div>
-      <h1 className="mt-3 text-lg font-medium leading-snug lg:text-xl">{l.title}</h1>
-      <p className="mt-1.5 flex flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground">
+      <p className="mt-2 flex flex-wrap items-center gap-x-1.5 text-sm text-muted-foreground">
         <MapPin className="size-3.5" aria-hidden />
         {[l.city, countryName(l.country)].filter(Boolean).join(', ')}
         <span aria-hidden>·</span>
@@ -41,10 +42,21 @@ function PriceBlock({ l, className }: { l: ListingDetailDto; className?: string 
           {timeAgo(l.publishedAt ?? l.createdAt)}
         </time>
       </p>
+
+      <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+        <p className="tabular font-display text-[2rem] font-semibold leading-none tracking-tight lg:text-[2.5rem]">
+          {formatPrice(l)}
+        </p>
+        {l.isNegotiable && l.type !== 'request' && (
+          <span className="-rotate-2 rounded-sm border-[1.5px] border-primary px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.12em] text-primary">
+            Open to offers
+          </span>
+        )}
+      </div>
       {l.status !== 'active' && (
         <p
           className={cn(
-            'mt-3 inline-block rounded-md px-2 py-1 text-xs font-medium capitalize',
+            'mt-4 inline-block rounded-md px-2 py-1 text-xs font-medium capitalize',
             l.status === 'sold'
               ? 'bg-foreground text-background'
               : 'bg-saffron/20 text-saffron-foreground',
@@ -109,7 +121,7 @@ function SellerCard({ l }: { l: ListingDetailDto }) {
 function ListingSkeleton() {
   return (
     <div className="lg:grid lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,1fr)] lg:gap-10">
-      <Skeleton className="-mx-4 aspect-[4/3] sm:mx-0 sm:rounded-xl" />
+      <Skeleton className="-mx-4 -mt-5 aspect-[4/3] sm:mx-0 sm:mt-0 sm:rounded-xl" />
       <div className="mt-5 space-y-3 lg:mt-0">
         <Skeleton className="h-8 w-1/2" />
         <Skeleton className="h-5 w-4/5" />
@@ -128,7 +140,7 @@ export function ListingView({ slug, initial }: { slug: string; initial: ListingD
     const gone = error instanceof ApiError && error.status === 404;
     return (
       <div className="max-w-md py-10">
-        <h1 className="text-xl font-semibold">
+        <h1 className="font-display text-2xl font-medium">
           {gone ? 'This listing isn’t available' : 'Something went wrong'}
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
@@ -159,24 +171,34 @@ export function ListingView({ slug, initial }: { slug: string; initial: ListingD
       <div className="lg:grid lg:grid-cols-[minmax(0,1.35fr)_minmax(18rem,1fr)] lg:gap-10">
         <div className="min-w-0">
           <Gallery images={l.images} title={l.title} />
-          <PriceBlock l={l} className="mt-5 lg:hidden" />
+          <InfoBlock l={l} className="mt-5 lg:hidden" />
 
-          <section className="mt-8">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+          <section aria-labelledby="about-heading" className="mt-10">
+            <h2 id="about-heading" className="font-display text-xl font-medium">
               Description
             </h2>
             {/* Stored raw, rendered as text — React escapes it (§5, §9). */}
-            <p className="mt-3 whitespace-pre-line text-[15px] leading-relaxed">{l.description}</p>
+            <p className="mt-3 max-w-prose whitespace-pre-line text-[15px] leading-relaxed">
+              {l.description}
+            </p>
           </section>
 
-          <dl className="mt-8 grid grid-cols-[auto_1fr] gap-x-8 gap-y-2.5 border-t pt-6 text-sm">
-            {details.map(([k, v]) => (
-              <div key={k} className="contents">
-                <dt className="text-muted-foreground">{k}</dt>
-                <dd>{v}</dd>
-              </div>
-            ))}
-          </dl>
+          {/* A printed price list: dotted leaders carry the eye from label to value. */}
+          <section aria-labelledby="details-heading" className="mt-10 max-w-md">
+            <h2 id="details-heading" className="font-display text-xl font-medium">
+              Details
+            </h2>
+            <dl className="mt-3 space-y-2.5 text-sm">
+              {details.map(([k, v]) => (
+                <div key={k} className="flex items-baseline">
+                  <dt className="flex flex-1 items-baseline gap-2 text-muted-foreground after:min-w-6 after:flex-1 after:border-b after:border-dotted after:border-foreground/30 after:content-['']">
+                    {k}
+                  </dt>
+                  <dd className="pl-2 text-right">{v}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
 
           {l.tags.length > 0 && (
             <ul className="mt-6 flex flex-wrap gap-1.5" aria-label="Tags">
@@ -194,8 +216,9 @@ export function ListingView({ slug, initial }: { slug: string; initial: ListingD
           )}
         </div>
 
-        <aside className="mt-8 space-y-5 lg:sticky lg:top-8 lg:mt-0 lg:self-start">
-          <PriceBlock l={l} className="hidden lg:block" />
+        {/* top-24 clears the sticky top bar (4rem) with room to breathe. */}
+        <aside className="mt-8 space-y-5 lg:sticky lg:top-24 lg:mt-0 lg:self-start">
+          <InfoBlock l={l} className="hidden lg:block" />
           {l.isOwner ? (
             <div className="rounded-lg border bg-card p-4">
               <p className="mb-3 flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -210,11 +233,15 @@ export function ListingView({ slug, initial }: { slug: string; initial: ListingD
           )}
           <SellerCard l={l} />
           {!l.isOwner && (
-            <p className="flex gap-2.5 rounded-lg bg-secondary/60 p-3 text-xs leading-relaxed text-secondary-foreground">
-              <ShieldCheck className="mt-0.5 size-4 shrink-0 text-primary" aria-hidden />
-              Pay through MarketHub escrow. The seller is paid only after you confirm delivery —
-              never send money outside the app.
-            </p>
+            <div className="ticket rounded-md bg-secondary text-secondary-foreground">
+              <span className="grid place-items-center text-primary">
+                <ShieldCheck className="size-5" aria-hidden />
+              </span>
+              <p className="border-l-[1.5px] border-dashed border-foreground/20 py-3 pl-3.5 pr-4 text-xs leading-relaxed">
+                <span className="font-semibold">Pay through MarketHub escrow.</span> The seller is
+                paid only after you confirm delivery — never send money outside the app.
+              </p>
+            </div>
           )}
           {!l.isOwner && <ReportButton entityType="listing" entityId={l.id} />}
         </aside>

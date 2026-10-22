@@ -76,7 +76,7 @@ export function OfferCard({
         <div className="px-3.5 pb-3 pt-2.5">
           <p
             className={cn(
-              'tabular text-2xl font-semibold tracking-tight',
+              'tabular font-display text-[1.65rem] font-semibold leading-tight tracking-tight',
               !live &&
                 offer.status !== 'accepted' &&
                 'text-muted-foreground line-through decoration-1',

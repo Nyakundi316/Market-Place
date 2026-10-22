@@ -3,7 +3,7 @@
 import { useTotalUnread } from '@/hooks/use-chat';
 import { cn } from '@/lib/utils';
 
-/** Sidebar shows the number; the mobile tab bar only has room for a dot. */
+/** The top bar shows the number; the mobile tab bar only has room for a dot. */
 export function UnreadCount({
   variant,
   className,

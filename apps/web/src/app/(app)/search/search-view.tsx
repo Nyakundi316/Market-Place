@@ -37,9 +37,13 @@ export function SearchView() {
           setFilters({ ...filters, q: text.trim() });
           input.current?.blur();
         }}
-        className="relative lg:max-w-xl"
+        className="relative lg:max-w-2xl"
       >
-        <Search className="absolute left-3.5 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Search
+          className="pointer-events-none absolute left-0 top-1/2 size-5 -translate-y-1/2 text-muted-foreground lg:size-6"
+          aria-hidden
+        />
+        {/* The query is the page's headline: serif on a rule, no box. Focus thickens the rule. */}
         <input
           ref={input}
           type="search"
@@ -49,7 +53,7 @@ export function SearchView() {
           value={text}
           onChange={(e) => setText(e.target.value)}
           maxLength={100}
-          className="h-12 w-full rounded-lg border bg-card pl-10 pr-10 text-base shadow-card outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-search-cancel-button]:hidden"
+          className="h-14 w-full rounded-none border-b-2 border-foreground bg-transparent pl-8 pr-10 font-display text-xl outline-none transition-[border-color,box-shadow] placeholder:text-muted-foreground/70 focus-visible:border-primary focus-visible:shadow-[0_2px_0_hsl(var(--primary))] focus-visible:ring-0 focus-visible:ring-offset-0 sm:text-2xl lg:h-16 lg:pl-10 lg:text-4xl [&::-webkit-search-cancel-button]:hidden"
         />
         {text && (
           <button
@@ -59,7 +63,7 @@ export function SearchView() {
               setText('');
               input.current?.focus();
             }}
-            className="absolute right-2 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-full text-muted-foreground hover:bg-accent"
+            className="absolute right-0 top-1/2 grid size-9 -translate-y-1/2 place-items-center rounded-full text-muted-foreground hover:bg-accent"
           >
             <X className="size-4" />
           </button>
@@ -69,7 +73,8 @@ export function SearchView() {
       <ListingBrowser
         toolbar={
           filters.q ? (
-            <p className="mr-2 truncate text-sm text-muted-foreground">
+            // On a phone the query above already says it, and this would truncate to "Result…".
+            <p className="mr-2 truncate text-sm text-muted-foreground max-sm:hidden">
               Results for <span className="font-medium text-foreground">“{filters.q}”</span>
             </p>
           ) : null

@@ -42,29 +42,38 @@ export default async function CategoryPage({ params }: Props) {
           { name: c.name, path: `/c/${c.slug}` },
         ])}
       />
-      <nav
-        aria-label="Breadcrumb"
-        className="flex items-center gap-1 text-xs text-muted-foreground"
-      >
-        <Link href="/feed" className="hover:text-foreground">
-          Discover
-        </Link>
-        {parent && (
-          <>
-            <ChevronRight className="size-3" aria-hidden />
-            <Link href={`/c/${parent.slug}`} className="hover:text-foreground">
-              {parent.name}
+      {/* Same masthead as Discover: kicker + serif title, the blurb ruled off to the side. */}
+      <header className="grid gap-x-12 gap-y-3 lg:grid-cols-[minmax(0,1fr)_17rem] lg:items-end">
+        <div>
+          <nav
+            aria-label="Breadcrumb"
+            className="flex items-center gap-1.5 text-xs font-medium uppercase tracking-[0.14em] text-muted-foreground"
+          >
+            <Link href="/feed" className="hover:text-foreground">
+              Discover
             </Link>
-          </>
+            {parent && (
+              <>
+                <ChevronRight className="size-3" aria-hidden />
+                <Link href={`/c/${parent.slug}`} className="hover:text-foreground">
+                  {parent.name}
+                </Link>
+              </>
+            )}
+          </nav>
+          <h1 className="text-balance mt-2 font-display text-[2rem] font-medium leading-[1.05] tracking-tight sm:text-4xl lg:text-5xl">
+            {c.name}
+          </h1>
+        </div>
+        {c.description && (
+          <p className="max-w-sm text-sm leading-relaxed text-muted-foreground lg:border-l lg:pb-1.5 lg:pl-5">
+            {c.description}
+          </p>
         )}
-      </nav>
-      <h1 className="mt-1.5 text-2xl font-semibold tracking-tight lg:text-3xl">{c.name}</h1>
-      {c.description && (
-        <p className="mt-1 max-w-prose text-sm text-muted-foreground">{c.description}</p>
-      )}
+      </header>
 
       {chips.length > 0 && (
-        <div className="mt-5">
+        <div className="mt-6 lg:mt-8">
           <CategoryChips
             categories={chips}
             activeSlug={c.children.length ? undefined : c.slug}

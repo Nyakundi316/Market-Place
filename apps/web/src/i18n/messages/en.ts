@@ -7,6 +7,8 @@ export const en = {
   nav: {
     discover: 'Discover',
     search: 'Search',
+    searchHint: 'Search phones, sofas, plumbers…',
+    saved: 'Saved',
     sell: 'Sell',
     sellSomething: 'Sell something',
     chats: 'Chats',

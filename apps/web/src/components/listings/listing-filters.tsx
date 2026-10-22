@@ -71,7 +71,9 @@ export function useFilterParams() {
 function FilterFields({ draft, set }: { draft: Filters; set: (k: FilterKey, v: string) => void }) {
   const countries = useMemo(countryOptions, []);
   return (
-    <div className="space-y-6">
+    // Hairline-ruled sections, like the category rail. Rules sit on wrappers, never on a
+    // fieldset: its legend would straddle the line.
+    <div className="space-y-5">
       <fieldset>
         <legend className="text-sm font-medium">Type</legend>
         <div className="mt-2 flex flex-wrap gap-1.5">
@@ -82,10 +84,10 @@ function FilterFields({ draft, set }: { draft: Filters; set: (k: FilterKey, v: s
               aria-pressed={(draft.type ?? '') === t}
               onClick={() => set('type', t)}
               className={cn(
-                'rounded-full border px-3 py-1 text-sm',
+                'rounded-full border px-3 py-1 text-sm transition-colors',
                 (draft.type ?? '') === t
-                  ? 'border-primary bg-primary/10 font-medium text-primary'
-                  : 'hover:border-foreground/30',
+                  ? 'border-foreground bg-foreground text-background'
+                  : 'bg-card hover:border-foreground/40',
               )}
             >
               {t ? TYPE_LABEL[t] : 'Any'}
@@ -94,7 +96,7 @@ function FilterFields({ draft, set }: { draft: Filters; set: (k: FilterKey, v: s
         </div>
       </fieldset>
 
-      <div>
+      <div className="border-t pt-5">
         <span className="text-sm font-medium" id="price-label">
           Price
         </span>
@@ -123,7 +125,7 @@ function FilterFields({ draft, set }: { draft: Filters; set: (k: FilterKey, v: s
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-1">
+      <div className="grid grid-cols-2 gap-3 border-t pt-5 lg:grid-cols-1">
         <div className="space-y-1.5">
           <Label htmlFor="f-country">Country</Label>
           <NativeSelect
@@ -149,27 +151,29 @@ function FilterFields({ draft, set }: { draft: Filters; set: (k: FilterKey, v: s
         </div>
       </div>
 
-      <fieldset>
-        <legend className="text-sm font-medium">Seller</legend>
-        <label className="mt-2 flex items-center gap-2.5 text-sm">
-          <input
-            type="checkbox"
-            className="size-4 accent-[hsl(var(--primary))]"
-            checked={draft.verified === 'true'}
-            onChange={(e) => set('verified', e.target.checked ? 'true' : '')}
-          />
-          Verified sellers only
-        </label>
-        <label className="mt-2 flex items-center gap-2.5 text-sm">
-          <input
-            type="checkbox"
-            className="size-4 accent-[hsl(var(--primary))]"
-            checked={draft.rating === '4'}
-            onChange={(e) => set('rating', e.target.checked ? '4' : '')}
-          />
-          Rated 4★ and up
-        </label>
-      </fieldset>
+      <div className="border-t pt-5">
+        <fieldset>
+          <legend className="text-sm font-medium">Seller</legend>
+          <label className="mt-2 flex items-center gap-2.5 text-sm">
+            <input
+              type="checkbox"
+              className="size-4 accent-[hsl(var(--primary))]"
+              checked={draft.verified === 'true'}
+              onChange={(e) => set('verified', e.target.checked ? 'true' : '')}
+            />
+            Verified sellers only
+          </label>
+          <label className="mt-2 flex items-center gap-2.5 text-sm">
+            <input
+              type="checkbox"
+              className="size-4 accent-[hsl(var(--primary))]"
+              checked={draft.rating === '4'}
+              onChange={(e) => set('rating', e.target.checked ? '4' : '')}
+            />
+            Rated 4★ and up
+          </label>
+        </fieldset>
+      </div>
     </div>
   );
 }
@@ -221,8 +225,8 @@ export function ListingFilters({ variant }: { variant: 'sidebar' | 'sheet' }) {
   if (variant === 'sidebar') {
     return (
       <aside aria-label="Filters" className="hidden lg:block">
-        <div className="flex items-baseline justify-between">
-          <h2 className="text-sm font-semibold">Filters</h2>
+        <div className="flex items-baseline justify-between border-b-2 border-foreground pb-2">
+          <h2 className="text-xs font-medium uppercase tracking-[0.14em]">Filters</h2>
           {active > 0 && (
             <button
               type="button"
@@ -233,7 +237,7 @@ export function ListingFilters({ variant }: { variant: 'sidebar' | 'sheet' }) {
             </button>
           )}
         </div>
-        <div className="mt-4">
+        <div className="mt-5">
           <FilterFields draft={draft} set={(k, v) => setDraft((d) => ({ ...d, [k]: v }))} />
         </div>
       </aside>

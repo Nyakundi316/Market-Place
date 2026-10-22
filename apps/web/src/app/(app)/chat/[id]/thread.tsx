@@ -73,7 +73,7 @@ function ThreadHeader({ c }: { c: ConversationDto }) {
       {/* The listing stays in view: every message is about this item. */}
       <Link
         href={`/l/${listing.slug}`}
-        className="flex items-center gap-3 border-t px-4 py-2 text-sm hover:bg-accent/50 lg:mr-5 lg:max-w-xs lg:shrink-0 lg:rounded-lg lg:border lg:px-2 lg:py-1.5"
+        className="flex items-center gap-3 border-t px-4 py-2 text-sm hover:bg-accent/50 lg:mr-5 lg:max-w-xs lg:shrink-0 lg:rounded-lg lg:border lg:py-1.5 lg:pl-2 lg:pr-3 xl:max-w-sm"
       >
         {listing.coverThumbUrl ? (
           <Image
@@ -85,18 +85,20 @@ function ThreadHeader({ c }: { c: ConversationDto }) {
             className="size-9 rounded object-cover"
           />
         ) : (
-          <span className="size-9 rounded bg-muted" />
+          <span className="size-9 shrink-0 rounded bg-muted" />
         )}
-        <span className="min-w-0">
-          <span className="block truncate">{listing.title}</span>
-          <span className="text-xs text-muted-foreground">
-            {listing.status === 'sold'
-              ? 'Sold'
-              : listing.price
-                ? formatMoney(listing.price, listing.currency)
-                : 'Price on request'}
+        <span className="min-w-0 flex-1 truncate">{listing.title}</span>
+        {listing.status === 'sold' ? (
+          <span className="shrink-0 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            Sold
           </span>
-        </span>
+        ) : listing.price ? (
+          <span className="price-tag shrink-0 text-xs">
+            {formatMoney(listing.price, listing.currency)}
+          </span>
+        ) : (
+          <span className="shrink-0 text-xs text-muted-foreground">Price on request</span>
+        )}
       </Link>
     </header>
   );
@@ -351,7 +353,7 @@ export function Thread({ id }: { id: string }) {
             return (
               <Fragment key={m.id}>
                 {newDay && (
-                  <p className="mb-1 mt-5 text-center text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                  <p className="mb-1 mt-5 flex items-center gap-3 text-[11px] font-medium uppercase tracking-[0.14em] text-muted-foreground before:h-px before:flex-1 before:bg-border after:h-px after:flex-1 after:bg-border">
                     {dayLabel(m.createdAt)}
                   </p>
                 )}

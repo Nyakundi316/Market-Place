@@ -12,6 +12,16 @@ const mono = localFont({
   variable: '--font-mono',
   weight: '100 900',
 });
+// Editorial serif for headings and headline prices; the wordmark and UI stay in Geist.
+// Fraunces (SIL OFL), latin, all axes incl. SOFT/opsz. Self-hosted like Geist so a build
+// never depends on reaching Google Fonts (next/font/google fails the build when it can't).
+const display = localFont({
+  src: './fonts/FrauncesVF.woff2',
+  variable: '--font-display',
+  weight: '100 900',
+  display: 'swap',
+  adjustFontFallback: 'Times New Roman',
+});
 
 const DESCRIPTION =
   'Buy and sell products and services with verified people, real-time chat and escrow-protected payments.';
@@ -39,7 +49,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
-      <body className={`${sans.variable} ${mono.variable} font-sans antialiased`}>
+      <body
+        className={`${sans.variable} ${mono.variable} ${display.variable} font-sans antialiased`}
+      >
         <Providers>{children}</Providers>
         <ServiceWorker />
         <SentryClient />

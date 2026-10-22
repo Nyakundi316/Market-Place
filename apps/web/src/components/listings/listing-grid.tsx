@@ -9,15 +9,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { ListingCard } from './listing-card';
 
-const GRID = 'grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 lg:gap-x-5 xl:grid-cols-4';
+const GRID = 'grid grid-cols-2 gap-x-3 gap-y-7 sm:grid-cols-3 lg:gap-x-5 lg:gap-y-9 xl:grid-cols-4';
 
 export function ListingGridSkeleton({ count = 8 }: { count?: number }) {
   return (
     <div className={GRID} aria-busy aria-label="Loading listings">
       {Array.from({ length: count }, (_, i) => (
         <div key={i}>
-          <Skeleton className="aspect-[4/3] rounded-lg" />
-          <Skeleton className="mt-2 h-4 w-1/2" />
+          <Skeleton className="aspect-[4/3] rounded-md" />
+          <Skeleton className="mt-2.5 h-4 w-1/2" />
           <Skeleton className="mt-1.5 h-3.5 w-5/6" />
           <Skeleton className="mt-1.5 h-3 w-2/3" />
         </div>
@@ -31,10 +31,13 @@ export function ListingGrid({
   query,
   empty,
   showStatus,
+  lead = false,
 }: {
   query: UseInfiniteQueryResult<InfiniteData<CursorPage<ListingCardDto>>>;
   empty?: React.ReactNode;
   showStatus?: boolean;
+  /** first listing gets a 2×2 tile — for curated feeds, not for search results */
+  lead?: boolean;
 }) {
   const sentinel = useRef<HTMLDivElement>(null);
   const { data, hasNextPage, isFetchingNextPage, fetchNextPage, isPending, isError, refetch } =
@@ -84,7 +87,13 @@ export function ListingGrid({
     <>
       <div className={GRID}>
         {items.map((l, i) => (
-          <ListingCard key={l.id} listing={l} priority={i < 4} showStatus={showStatus} />
+          <ListingCard
+            key={l.id}
+            listing={l}
+            priority={i < 4}
+            showStatus={showStatus}
+            lead={lead && i === 0}
+          />
         ))}
       </div>
       <div ref={sentinel} className={cn('h-10', isFetchingNextPage && 'mt-6')}>

@@ -108,7 +108,7 @@ export function ConversationList({ activeId }: { activeId?: string }) {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <div className="flex items-baseline gap-3 px-4 pb-3 pt-1 lg:pt-5">
-        <h1 className="text-2xl font-semibold tracking-tight">Chats</h1>
+        <h1 className="font-display text-3xl font-medium tracking-tight">Chats</h1>
         {!connected && !isPending && (
           <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <WifiOff className="size-3" aria-hidden /> Reconnecting…

@@ -101,7 +101,7 @@ function OpenOffers({ ready }: { ready: boolean }) {
   const heading = useId();
 
   return (
-    <section aria-labelledby={heading} className="lg:sticky lg:top-8">
+    <section aria-labelledby={heading} className="lg:sticky lg:top-24">
       <h2 id={heading} className="text-sm font-semibold">
         Open offers
       </h2>

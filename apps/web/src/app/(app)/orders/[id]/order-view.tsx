@@ -556,7 +556,7 @@ export function OrderView({ id }: { id: string }) {
           </section>
         </div>
 
-        <aside className="space-y-5 lg:sticky lg:top-8 lg:self-start">
+        <aside className="space-y-5 lg:sticky lg:top-24 lg:self-start">
           <div className="rounded-xl border bg-card p-4">
             <Money o={o} />
           </div>

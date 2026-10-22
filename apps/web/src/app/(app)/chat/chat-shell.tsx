@@ -16,8 +16,9 @@ export function ChatShell({ children }: { children: React.ReactNode }) {
   const activeId = match && match[1] !== 'new' ? match[1] : undefined;
 
   if (!ready) return null;
+  // Desktop fills the viewport exactly: 100dvh − top bar (4rem + 1px border) − main's 2rem/3rem padding.
   return (
-    <div className="-mx-4 lg:mx-0 lg:grid lg:h-[calc(100dvh-5rem)] lg:grid-cols-[20rem_minmax(0,1fr)] lg:overflow-hidden lg:rounded-xl lg:border lg:bg-card lg:shadow-card">
+    <div className="-mx-4 lg:mx-0 lg:grid lg:h-[calc(100dvh-9rem-1px)] lg:grid-cols-[20rem_minmax(0,1fr)] lg:overflow-hidden lg:rounded-lg lg:border lg:bg-card lg:shadow-card">
       <section
         aria-label="Conversations"
         className={cn('flex-col lg:flex lg:min-h-0 lg:border-r', match ? 'hidden' : 'flex')}
