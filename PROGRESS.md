@@ -1,6 +1,6 @@
 # Progress
 
-_Last updated: 2026-10-19_
+_Last updated: 2026-10-22_
 
 ## Shipped — Phase 1 (Foundation) ✅
 - **1.0** `packages/config`: shared tsconfig (base/nest/next/lib), ESLint flat config, Prettier; LF via `.gitattributes`; pnpm pinned to 9.15
@@ -146,6 +146,10 @@ Scope agreed 2026-10-19: merge the launch polish, screen sizes, staging + load t
 - **8.0** PR #1 (launch polish) merged, fast-forward. Its first CI run caught a real bug: the sending tab got its own `message:new` before the ack, so every sender briefly saw their message twice (the "known-flaky" chat test). The gateway now excludes the sending socket; the sender's other tabs still get it. Also a sign-up test race and two push spec type errors that only `tsc` saw
 - **8.1** Screen sizes (§0, §11): the mobile project runs at 375px (was 412); `e2e/responsive.spec.ts` visits every main screen (public, auth, onboarding, buyer/seller with a live chat thread, admin) at 375/768/1280 and fails on sideways scroll, anything past the right edge outside a scroll container, or a missing main nav. Every screen already fit; the detector was checked against an injected overflow
 - **8.2** Staging + load: **Deploy** takes staging|production (same Fly configs, `-staging` app suffix, 2 API machines; URLs from each GitHub environment, nothing per-environment in the toml files). **Load test (staging)** seeds users over `fly ssh`, measures the runner's round trip to jnb, ramps listings and/or chat, posts results to the run summary and always cleans up. k6 ramp mode: climb in fifths of `PEAK`, abort at the first broken threshold, `vus` max ≈ what it held. RUNBOOK §11
+- **8.3** New look, **"market-stall editorial"** (owner's pick of three directions, 2026-10-20; scope: shell + core screens; not committed yet). The desktop sidebar is gone: a sticky top bar carries the wordmark, search, Discover · Saved · Chats · Deals, Sell, the bell and the account menu, and Saved replaced Search in the phone tab bar. Fraunces (display serif) sets the mastheads, section heads, listing titles and headline prices; card prices hang on a saffron swing tag on the photo; categories are a ruled rail that never wraps; Discover opens with a 2×2 lead tile; on `/search` the query is the headline; the listing page has a dotted-leader spec sheet, an "Open to offers" stamp and the escrow note as a ticket stub; chat pins the listing with its tag, and offer amounts are in the serif. `.stitch/DESIGN.md` describes the system. Deals, orders, seller, profile, settings, create and admin only inherit the tokens, for a follow-up pass. Found on the way:
+  - Three sticky asides (listing, deals, order) and the desktop chat pane's height assumed there was no header; they now clear the 4rem bar
+  - `next/font/google` fails a production build when Node can't reach Google Fonts (it couldn't, locally, on 2026-10-22), and dev silently swapped in a fallback serif. Fraunces is now self-hosted like Geist (`src/app/fonts/FrauncesVF.woff2`, latin, SIL OFL, 118 KB: the same file Google served)
+  - "NEG." wrapped the tag onto two lines on half-width phone cards from KES 100,000 up; it's dropped there (the listing page's stamp still says it)
 
 Fixes found on the way:
 - `robots.txt` would have let staging be indexed (production build on https). `DEPLOY_ENV` build arg, declared in turbo.json (strict env mode would hide it from `next build`)
@@ -161,6 +165,8 @@ Fixes found on the way:
   - **Category chips wrapped** ("Home & Garden" over three lines): `shrink-0` was on the inline link, not the flex `<li>`
 
 Tests (2026-10-19): shared 73 · api unit 35 · api e2e 232 · web unit 35 · Playwright 46 (mobile 21 at 375px + desktop 21 + responsive 4). k6 ramp checked locally through `grafana/k6` at PEAK=12
+
+Tests (2026-10-22, 8.3, local against `next build` + `start`): web unit 35 · Playwright 46/46 on the first run; typecheck, lint and the production build clean. API and shared suites not re-run (untouched)
 
 ## Before launch (everything)
 Accounts and keys only — no open feature decisions. Details in `docs/RUNBOOK.md` §2–3 (production) and §11 (staging).
@@ -187,7 +193,7 @@ Accounts and keys only — no open feature decisions. Details in `docs/RUNBOOK.m
   - **Browsing** stopped at 60 VUs on listing p95 589.8 ms vs a 588 ms budget (288 ms of it the runner→jnb trip); 0 of 1,066 requests failed. That measures transatlantic jitter, not capacity
   - **Chat** held 400 users cleanly; at 600, 166 sends/connects failed (limit 10) with a long tail (connects up to 20 s, acks up to 17 s) while p95 stayed ~335 ms. Suspects: shared-cpu-1x throttling under sustained load, and Prisma's default pool of 3 connections per 1-CPU machine
 - [ ] **Next:** chat-only ramp while watching Fly Metrics (CPU/throttling) with `connection_limit=10` on `DATABASE_URL`, to tell CPU from pool. Until fixed, plan for ~400 concurrent chat users
-- [ ] **Now:** re-enter the five staging keys with `stage-staging-key.sh` (start it, then copy each key), deploy staging (the upload and env fixes are on `main`; the hydration/sheet/chip fixes are not committed yet), re-run the sweep: the uploads (avatar, ID, listing photos, chat photo) and Pay now → Paystack checkout are all that's left
+- [ ] **Now:** re-enter the five staging keys with `stage-staging-key.sh` (start it, then copy each key), deploy staging (the upload and env fixes are on `main`; the hydration/sheet/chip fixes are on `feat/phase-8`; the 8.3 redesign isn't committed yet), re-run the sweep: the uploads (avatar, ID, listing photos, chat photo) and Pay now → Paystack checkout are all that's left
 - [ ] Browsing capacity needs a measure distance can't swamp (e.g. a `Server-Timing` header k6 can read), or a load machine near jnb
 - [ ] **Decision for production**: Fly Managed Postgres isn't offered in `jnb` (nearest: ams/fra/lhr). Options: self-run Fly Postgres in jnb (we own backups and failover; RUNBOOK §8 assumes point-in-time recovery), a managed Postgres in South Africa from another provider, or moving the stack to Europe
 
@@ -200,4 +206,4 @@ Local dev: `.env` now has a dev-only VAPID pair (push works with `pnpm build && 
 - `main` is pushed to `origin`; CI runs on every push. Phase 8 is on `feat/phase-8` (PR to `main`)
 - Not verifiable without a Fly account: the Deploy/Load workflows' `flyctl` steps. Whether `fly deploy -e` overrides toml `[env]` is undocumented, so no value is set in both places; whether a deploy token may `fly ssh` is noted in RUNBOOK §11.5
 - Headless Chrome via Playwright: a `viewport` override on a persistent context breaks Cache Storage ("Entry already exists"); not an app bug, noted for anyone scripting push checks
-- Stitch MCP not connected; UI follows §6 + CLAUDE.md design rules directly
+- Stitch MCP not connected (it's configured only for another project); UI follows §6 + CLAUDE.md design rules directly, and `.stitch/DESIGN.md` mirrors the code. `.stitch/prompts/discover-desktop.md` still describes the pre-8.3 sidebar look
